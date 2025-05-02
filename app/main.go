@@ -32,7 +32,8 @@ func main() {
 
 	if len(fileContents) > 0 {
 		errCount := 0;
-		for i, x := range fileContents {
+		for i := 0; i < len(fileContents); i++ {
+			x := fileContents[i]
 			if x == '(' {
 				fmt.Println("LEFT_PAREN ( null")
 			} else if x == ')' {
