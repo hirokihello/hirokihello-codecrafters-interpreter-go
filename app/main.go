@@ -32,7 +32,7 @@ func main() {
 
 	if len(fileContents) > 0 {
 		errCount := 0;
-		for _, x := range fileContents {
+		for i, x := range fileContents {
 			if x == '(' {
 				fmt.Println("LEFT_PAREN ( null")
 			} else if x == ')' {
@@ -55,9 +55,14 @@ func main() {
 				fmt.Println("SEMICOLON ; null")
 			} else if x == '/' {
 				fmt.Println("SLASH / null")
+			} else if x == '=' {
+				if x[i+1] == '=' {
+					fmt.Println("EQUAL_EQUAL == null")
+				} else {
+					fmt.Println("EQUAL = null")
+				}
 			} else {
 				fmt.Fprintf(os.Stderr, "[line 1] Error: Unexpected character: %c\n", x)
-
 				errCount++
 			}
 		}
