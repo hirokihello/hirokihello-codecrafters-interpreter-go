@@ -48,6 +48,12 @@ func main() {
 				fmt.Println("DOT . null")
 			} else if x == ',' {
 				fmt.Println("COMMA , null")
+			} else if x == '-' {
+				fmt.Println("MINUS , null")
+			} else if x == ';' {
+				fmt.Println("SEMICOLON , null")
+			} else if x == '/' {
+				fmt.Println("SLASH , null")
 			}
 		}
 		fmt.Println("EOF  null")
