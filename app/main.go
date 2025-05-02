@@ -43,11 +43,11 @@ func main() {
 			} else if x == '*' {
 				fmt.Println("STAR * null")
 			} else if x == '+' {
-				fmt.Println("PLUS { null")
+				fmt.Println("PLUS + null")
 			} else if x == '.' {
-				fmt.Println("DOT { null")
+				fmt.Println("DOT . null")
 			} else if x == ',' {
-				fmt.Println("COMMA { null")
+				fmt.Println("COMMA , null")
 			}
 		}
 		fmt.Println("EOF  null")
