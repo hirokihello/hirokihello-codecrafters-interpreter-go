@@ -31,6 +31,7 @@ func main() {
 	}
 
 	if len(fileContents) > 0 {
+		errCount := 0;
 		for _, x := range fileContents {
 			if x == '(' {
 				fmt.Println("LEFT_PAREN ( null")
@@ -54,9 +55,16 @@ func main() {
 				fmt.Println("SEMICOLON ; null")
 			} else if x == '/' {
 				fmt.Println("SLASH / null")
+			} else {
+				fmt.Printf("[line 1] Error: Unexpected character: %c\n", x)
+				errCount++
 			}
 		}
 		fmt.Println("EOF  null")
+
+		if(errCount > 0) {
+			os.Exit(65)
+		}
 	} else {
 		fmt.Println("EOF  null") // Placeholder, remove this line when implementing the scanner
 	}
