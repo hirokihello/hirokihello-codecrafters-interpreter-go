@@ -56,7 +56,8 @@ func main() {
 			} else if x == '/' {
 				fmt.Println("SLASH / null")
 			} else {
-				fmt.Errorf("[line 1] Error: Unexpected character: %c\n", x)
+				fmt.Fprintf(os.Stderr, "[line 1] Error: Unexpected character: %c\n", x)
+
 				errCount++
 			}
 		}
