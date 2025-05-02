@@ -40,6 +40,14 @@ func main() {
 				fmt.Println("RIGHT_BRACE } null")
 			} else if x == '{' {
 				fmt.Println("LEFT_BRACE { null")
+			} else if x == '*' {
+				fmt.Println("STAR * null")
+			} else if x == '+' {
+				fmt.Println("PLUS { null")
+			} else if x == '.' {
+				fmt.Println("DOT { null")
+			} else if x == ',' {
+				fmt.Println("COMMA { null")
 			}
 		}
 		fmt.Println("EOF  null")
