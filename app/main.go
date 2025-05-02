@@ -37,9 +37,9 @@ func main() {
 			} else if x == ')' {
 				fmt.Println("RIGHT_PAREN ) null")
 			} else if x == '}' {
-				fmt.Println("RIGHT_BRACE ) null")
+				fmt.Println("RIGHT_BRACE } null")
 			} else if x == '{' {
-				fmt.Println("LEFT_BRACE ) null")
+				fmt.Println("LEFT_BRACE { null")
 			}
 		}
 		fmt.Println("EOF  null")
