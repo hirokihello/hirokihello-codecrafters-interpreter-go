@@ -56,7 +56,7 @@ func main() {
 			} else if x == '/' {
 				fmt.Println("SLASH / null")
 			} else if x == '=' {
-				if string(fileContents[i+1]) == "=" {
+				if fileContents[i+1] == '=' {
 					fmt.Println("EQUAL_EQUAL == null")
 				} else {
 					fmt.Println("EQUAL = null")
