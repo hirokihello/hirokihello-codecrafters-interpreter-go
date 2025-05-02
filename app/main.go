@@ -31,7 +31,7 @@ func main() {
 	}
 
 	if len(fileContents) > 0 {
-		errCount := 0;
+		errCount := 0
 		for i := 0; i < len(fileContents); i++ {
 			x := fileContents[i]
 			if x == '(' {
@@ -57,8 +57,9 @@ func main() {
 			} else if x == '/' {
 				fmt.Println("SLASH / null")
 			} else if x == '=' {
-				if i + 1 < len(fileContents) && fileContents[i+1] == '=' {
+				if i+1 < len(fileContents) && fileContents[i+1] == '=' {
 					fmt.Println("EQUAL_EQUAL == null")
+					i++
 				} else {
 					fmt.Println("EQUAL = null")
 				}
@@ -69,7 +70,7 @@ func main() {
 		}
 		fmt.Println("EOF  null")
 
-		if(errCount > 0) {
+		if errCount > 0 {
 			os.Exit(65)
 		}
 	} else {
