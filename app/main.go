@@ -137,6 +137,16 @@ func main() {
 					number_formatted = number_token + ".0"
 				}
 				fmt.Printf("NUMBER %s %s\n", number_token, number_formatted)
+			} else if ('a' <= x && x <= 'z') || x == '_' {
+				identifier := ""
+				identifier += string(x)
+				for i+1 < len(fileContents) && (('a' <= fileContents[i+1] && fileContents[i+1] <= 'z') ||
+					fileContents[i+1] == '_' || ('0' <= fileContents[i+1] && fileContents[i+1] <= '9')) {
+					i++
+					identifier += string(fileContents[i])
+				}
+
+				fmt.Printf("IDENTIFIER %s null\n", identifier)
 			} else {
 				fmt.Fprintf(os.Stderr, "[line %d] Error: Unexpected character: %c\n", lineCount, x)
 				errCount++
