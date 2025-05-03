@@ -32,6 +32,7 @@ func main() {
 
 	if len(fileContents) > 0 {
 		errCount := 0
+		lineCount := 1
 		for i := 0; i < len(fileContents); i++ {
 			x := fileContents[i]
 			if x == '(' {
@@ -88,10 +89,12 @@ func main() {
 				} else {
 					fmt.Println("GREATER > null")
 				}
-			} else if x == ' ' || x == '\t' || x == '\n' {
+			} else if x == ' ' || x == '\t' {
 				// Ignore whitespace
+			} else if x == '\n' {
+				lineCount++;
 			} else {
-				fmt.Fprintf(os.Stderr, "[line 1] Error: Unexpected character: %c\n", x)
+				fmt.Fprintf(os.Stderr, "[line %d] Error: Unexpected character: %c\n", lineCount, x)
 				errCount++
 			}
 		}
