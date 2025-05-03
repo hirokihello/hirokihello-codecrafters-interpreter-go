@@ -57,7 +57,7 @@ func main() {
 				fmt.Println("SEMICOLON ; null")
 			} else if x == '/' {
 				if i+1 < len(fileContents) && fileContents[i+1] == '/' {
-					while(i < len(fileContents) && fileContents[i] != '\n') {
+					for i < len(fileContents) && fileContents[i] != '\n' {
 						i++
 					}
 				} else {
@@ -94,7 +94,7 @@ func main() {
 			} else if x == ' ' || x == '\t' {
 				// Ignore whitespace
 			} else if x == '\n' {
-				lineCount++;
+				lineCount++
 			} else {
 				fmt.Fprintf(os.Stderr, "[line %d] Error: Unexpected character: %c\n", lineCount, x)
 				errCount++
