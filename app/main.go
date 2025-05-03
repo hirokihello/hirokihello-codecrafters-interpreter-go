@@ -137,16 +137,50 @@ func main() {
 					number_formatted = number_token + ".0"
 				}
 				fmt.Printf("NUMBER %s %s\n", number_token, number_formatted)
-			} else if ('a' <= x && x <= 'z') || x == '_' {
-				identifier := ""
-				identifier += string(x)
+			} else if ('a' <= x && x <= 'z') || x == '_' || ('A' <= x && x <= 'Z') {
+				str := ""
+				str += string(x)
 				for i+1 < len(fileContents) && (('a' <= fileContents[i+1] && fileContents[i+1] <= 'z') ||
-					fileContents[i+1] == '_' || ('0' <= fileContents[i+1] && fileContents[i+1] <= '9')) {
+					fileContents[i+1] == '_' || ('0' <= fileContents[i+1] && fileContents[i+1] <= '9') || ('A' <= fileContents[i+1] && fileContents[i+1] <= 'Z')) {
 					i++
-					identifier += string(fileContents[i])
+					str += string(fileContents[i])
 				}
 
-				fmt.Printf("IDENTIFIER %s null\n", identifier)
+				if str == "and" {
+					fmt.Println("AND and null")
+				} else if str == "class" {
+					fmt.Println("CLASS class null")
+				} else if str == "else" {
+					fmt.Println("ELSE else null")
+				} else if str == "false" {
+					fmt.Println("FALSE false null")
+				} else if str == "for" {
+					fmt.Println("FOR for null")
+				} else if str == "fun" {
+					fmt.Println("FUN fun null")
+				} else if str == "if" {
+					fmt.Println("IF if null")
+				} else if str == "nil" {
+					fmt.Println("NIL nil null")
+				} else if str == "or" {
+					fmt.Println("OR or null")
+				} else if str == "print" {
+					fmt.Println("PRINT print null")
+				} else if str == "return" {
+					fmt.Println("RETURN return null")
+				} else if str == "super" {
+					fmt.Println("SUPER super null")
+				} else if str == "this" {
+					fmt.Println("THIS this null")
+				} else if str == "true" {
+					fmt.Println("TRUE true null")
+				} else if str == "var" {
+					fmt.Println("VAR var null")
+				} else if str == "while" {
+					fmt.Println("WHILE while null")
+				} else {
+					fmt.Printf("IDENTIFIER %s null\n", str)
+				}
 			} else {
 				fmt.Fprintf(os.Stderr, "[line %d] Error: Unexpected character: %c\n", lineCount, x)
 				errCount++
