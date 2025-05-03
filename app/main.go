@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"image"
 	"os"
 )
 
@@ -70,7 +71,19 @@ func main() {
 				} else {
 					fmt.Println("BANG ! null")
 				}
-			} else {
+			} else if x == '<' {
+				if i+1 < len(fileContents) && fileContents[i+1] == '=' {
+					fmt.Println("LESS_EQUAL <= null")
+				} else {
+					fmt.Println("LESS < null")
+				}
+			} else if x == '>' {
+				if i+1 < len(fileContents) && fileContents[i+1] == '=' {
+					fmt.Println("GREATER_EQUAL >= null")
+				} else {
+					fmt.Println("GREATER > null")
+				}
+			}else {
 				fmt.Fprintf(os.Stderr, "[line 1] Error: Unexpected character: %c\n", x)
 				errCount++
 			}
