@@ -96,8 +96,8 @@ func main() {
 			} else if x == '\n' {
 				lineCount++
 			} else {
+				fmt.Fprintf(os.Stderr, "[line %d] Error: Unexpected character: %c\n", lineCount, x)
 				errCount++
-				fmt.Fprintf(os.Stderr, "[line %d] Error: Unexpected character: %c\n", errCount, x)
 			}
 		}
 		fmt.Println("EOF  null")
