@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"image"
 	"os"
 )
 
@@ -83,7 +82,7 @@ func main() {
 				} else {
 					fmt.Println("GREATER > null")
 				}
-			}else {
+			} else {
 				fmt.Fprintf(os.Stderr, "[line 1] Error: Unexpected character: %c\n", x)
 				errCount++
 			}
