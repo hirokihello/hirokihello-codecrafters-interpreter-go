@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"strconv"
 	"unicode"
@@ -114,6 +115,7 @@ func main() {
 				}
 			} else if unicode.IsDigit(rune(x)) {
 				number_token := string(x)
+				number_formatted := ""
 				for i+1 < len(fileContents) && unicode.IsDigit(rune(fileContents[i+1])) {
 					i++
 					number_token += string(fileContents[i])
@@ -125,10 +127,16 @@ func main() {
 						i++
 						number_token += string(fileContents[i])
 					}
+					tmp_num, _ := strconv.ParseFloat(number_token, 64)
+					number_formatted = strconv.FormatFloat(tmp_num, 'g', -1, 64)
+					if math.Mod(tmp_num, 1) == 0 {
+						number_formatted = strconv.FormatFloat(tmp_num, 'g', -1, 64) + ".0"
+					}
 
+				} else {
+					number_formatted = number_token + ".0"
 				}
-				fmt.Printf("NUMBER %f %s\n", number_token, number_token)
-
+				fmt.Printf("NUMBER %s %s\n", number_token, number_formatted)
 			} else {
 				fmt.Fprintf(os.Stderr, "[line %d] Error: Unexpected character: %c\n", lineCount, x)
 				errCount++
