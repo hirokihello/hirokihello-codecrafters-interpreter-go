@@ -57,7 +57,7 @@ func main() {
 				fmt.Println("SEMICOLON ; null")
 			} else if x == '/' {
 				if i+1 < len(fileContents) && fileContents[i+1] == '/' {
-					for i < len(fileContents) && fileContents[i] != '\n' {
+					for i + 1 < len(fileContents) && fileContents[i+1] != '\n' {
 						i++
 					}
 				} else {
