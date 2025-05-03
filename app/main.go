@@ -60,6 +60,13 @@ func main() {
 				if i+1 < len(fileContents) && fileContents[i+1] == '=' {
 					fmt.Println("EQUAL_EQUAL == null")
 					i++
+				} else if x == '!' {
+					if i+1 < len(fileContents) && fileContents[i+1] == '=' {
+						fmt.Println("BANG_EQUAL != null")
+						i++
+					} else {
+						fmt.Println("BANG ! null")
+					}
 				} else {
 					fmt.Println("EQUAL = null")
 				}
