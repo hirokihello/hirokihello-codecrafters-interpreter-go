@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"os"
+	"strconv"
+	"unicode"
 )
 
 func main() {
@@ -103,13 +105,38 @@ func main() {
 					string_token += string(fileContents[i])
 				}
 
-				if i + 1 < len(fileContents) && fileContents[i+1] == '"' {
+				if i+1 < len(fileContents) && fileContents[i+1] == '"' {
 					fmt.Printf("STRING \"%s\" %s\n", string_token, string_token)
-					i++;
-				} else if i + 1 == len(fileContents) {
+					i++
+				} else if i+1 == len(fileContents) {
 					errCount++
 					fmt.Fprintf(os.Stderr, "[line %d] Error: Unterminated string.\n", lineCount)
 				}
+			} else if unicode.IsDigit(rune(x)) {
+				number_token := string(x)
+				num := 0.0
+				formatted := ""
+				for i+1 < len(fileContents) && unicode.IsDigit(rune(fileContents[i+1])) {
+					i++
+					number_token += string(fileContents[i])
+				}
+				if i+1 < len(fileContents) && fileContents[i+1] == '.' {
+					i++
+					number_token += string(fileContents[i])
+					for i+1 < len(fileContents) && unicode.IsDigit(rune(fileContents[i+1])) {
+						i++
+						number_token += string(fileContents[i])
+					}
+
+					num, _ := strconv.ParseFloat(number_token, 64)
+					formatted = strconv.FormatFloat(num, 'g', -1, 64)
+				} else {
+					number_token += ".0"
+					num, _ = strconv.ParseFloat(number_token, 64)
+					formatted = strconv.FormatFloat(num, 'g', -1, 64)
+				}
+				fmt.Printf("NUMBER %s %s\n", formatted, formatted)
+
 			} else {
 				fmt.Fprintf(os.Stderr, "[line %d] Error: Unexpected character: %c\n", lineCount, x)
 				errCount++
