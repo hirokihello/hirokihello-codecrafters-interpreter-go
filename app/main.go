@@ -73,12 +73,14 @@ func main() {
 			} else if x == '<' {
 				if i+1 < len(fileContents) && fileContents[i+1] == '=' {
 					fmt.Println("LESS_EQUAL <= null")
+					i++
 				} else {
 					fmt.Println("LESS < null")
 				}
 			} else if x == '>' {
 				if i+1 < len(fileContents) && fileContents[i+1] == '=' {
 					fmt.Println("GREATER_EQUAL >= null")
+					i++
 				} else {
 					fmt.Println("GREATER > null")
 				}
