@@ -116,6 +116,7 @@ func main() {
 				number_token := string(x)
 				num := 0.0
 				formatted := ""
+				num_answer := ""
 				for i+1 < len(fileContents) && unicode.IsDigit(rune(fileContents[i+1])) {
 					i++
 					number_token += string(fileContents[i])
@@ -130,12 +131,14 @@ func main() {
 
 					num, _ := strconv.ParseFloat(number_token, 64)
 					formatted = strconv.FormatFloat(num, 'g', -1, 64)
+					num_answer = formatted
 				} else {
 					number_token += ".0"
+					num_answer = number_token
 					num, _ = strconv.ParseFloat(number_token, 64)
 					formatted = strconv.FormatFloat(num, 'g', -1, 64)
 				}
-				fmt.Printf("NUMBER %s %s\n", formatted, formatted)
+				fmt.Printf("NUMBER %s %s\n", formatted, num_answer)
 
 			} else {
 				fmt.Fprintf(os.Stderr, "[line %d] Error: Unexpected character: %c\n", lineCount, x)
