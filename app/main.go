@@ -106,7 +106,7 @@ func main() {
 				if i + 1 < len(fileContents) && fileContents[i+1] == '"' {
 					fmt.Printf("STRING \"%s\" %s\n", string_token, string_token)
 					i++;
-				} else if i == len(fileContents) {
+				} else if i + 1 == len(fileContents) {
 					errCount++
 					fmt.Fprintf(os.Stderr, "[line %d] Error: Unterminated string.\n", lineCount)
 				}
