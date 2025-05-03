@@ -134,7 +134,8 @@ func main() {
 					num_answer = formatted
 				} else {
 					number_token += ".0"
-					num, _ = strconv.ParseFloat(number_token, 64)
+					num_tmp, _ := strconv.ParseInt(number_token, 10, 64)
+					num = float64(num_tmp)
 					num_answer = number_token
 				}
 				fmt.Printf("NUMBER %f %s\n", num, num_answer)
