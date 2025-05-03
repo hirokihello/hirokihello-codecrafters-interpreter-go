@@ -103,11 +103,12 @@ func main() {
 					string_token += string(fileContents[i])
 				}
 
-				if i+1 < len(fileContents) && fileContents[i+1] == '"' {
+				if i + 1 < len(fileContents) && fileContents[i+1] == '"' {
 					fmt.Printf("STRING \"%s\" %s\n", string_token, string_token)
+					i++;
 				} else if i == len(fileContents) {
 					errCount++
-					fmt.Errorf("[line %d] Error: Unterminated string.\n", lineCount)
+					fmt.Fprintf(os.Stderr, "[line %d] Error: Unterminated string.\n", lineCount)
 				}
 			} else {
 				fmt.Fprintf(os.Stderr, "[line %d] Error: Unexpected character: %c\n", lineCount, x)
