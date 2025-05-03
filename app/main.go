@@ -88,8 +88,9 @@ func main() {
 				} else {
 					fmt.Println("GREATER > null")
 				}
-			} else if x == ' ' || x == '	' {
+			} else if x == ' ' || x == '\t' || x == '\n' {
 				// Ignore whitespace
+				i++
 			} else {
 				fmt.Fprintf(os.Stderr, "[line 1] Error: Unexpected character: %c\n", x)
 				errCount++
