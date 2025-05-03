@@ -57,7 +57,7 @@ func main() {
 				fmt.Println("SEMICOLON ; null")
 			} else if x == '/' {
 				if i+1 < len(fileContents) && fileContents[i+1] == '/' {
-					for i + 1 < len(fileContents) && fileContents[i+1] != '\n' {
+					for i+1 < len(fileContents) && fileContents[i+1] != '\n' {
 						i++
 					}
 				} else {
@@ -95,6 +95,19 @@ func main() {
 				// Ignore whitespace
 			} else if x == '\n' {
 				lineCount++
+			} else if x == '"' {
+				string_token := ""
+
+				for i+1 < len(fileContents) && fileContents[i+1] != '"' {
+					i++
+					string_token += string(fileContents[i])
+				}
+
+				if i+1 < len(fileContents) && fileContents[i+1] == '"' {
+					fmt.Printf("STRING \"%s\" %s", string_token, string_token)
+				} else if i == len(fileContents) {
+					fmt.Errorf("[line %d] Error: Unterminated string.\n", lineCount)
+				}
 			} else {
 				fmt.Fprintf(os.Stderr, "[line %d] Error: Unexpected character: %c\n", lineCount, x)
 				errCount++
