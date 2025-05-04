@@ -8,7 +8,6 @@ import (
 	"unicode"
 )
 
-
 var reservedTokens = map[string]string{
 	"(":  "LEFT_PAREN",
 	")":  "RIGHT_PAREN",
@@ -185,6 +184,8 @@ func Parse() {
 
 	for _, token := range ast {
 		if token.tokenType == "NIL" || token.tokenType == "TRUE" || token.tokenType == "FALSE" {
+			fmt.Printf(token.value)
+		} else if token.tokenType == "NUMBER" {
 			fmt.Printf(token.value)
 		}
 	}
