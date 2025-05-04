@@ -2,10 +2,8 @@ package parse
 
 import (
 	"fmt"
-	"math"
+	"io"
 	"os"
-	"strconv"
-	"unicode"
 )
 
 var reservedTokens = map[string]string{
@@ -27,6 +25,7 @@ var reservedTokens = map[string]string{
 	">":  "GREATER",
 	">=": "GREATER_EQUAL",
 	"/":  "SLASH",
+	"!":  "BANG",
 }
 
 var reservedWords = map[string]string{
@@ -52,124 +51,37 @@ type Token struct {
 	tokenType string
 	value     string
 }
+type Parser struct {
+	tokens []Token
+	index  int
+}
 
-// tokenize は、ファイルの内容をトークンに変換します。
-// これは、トークンのリストを返します。
-func tokenize(fileContents []byte) []Token {
-	errCount := 0
-	lineCount := 1
-	tokens := make([]Token, 0)
-	for i := 0; i < len(fileContents); i++ {
-		x := fileContents[i]
-		if x == '(' || x == ')' || x == '}' || x == '{' || x == '*' || x == '+' || x == '.' || x == ',' ||
-			x == '-' || x == ';' {
-			tokens = append(tokens, Token{tokenType: reservedTokens[string(x)], value: string(x)})
-		} else if x == '=' || x == '!' || x == '<' || x == '>' {
-			if i+1 < len(fileContents) && fileContents[i+1] == '=' {
-				tokens = append(tokens, Token{
-					tokenType: reservedTokens[string(x)+string(fileContents[i+1])],
-					value:     string(x) + string(fileContents[i+1]),
-				})
-				i++
-			} else {
-				tokens = append(tokens, Token{tokenType: reservedTokens[string(x)], value: string(x)})
-			}
-		} else if x == '"' {
-			string_token := ""
+type AST struct {
+	nodes []Node
+}
 
-			for i+1 < len(fileContents) && fileContents[i+1] != '"' {
-				i++
-				string_token += string(fileContents[i])
-			}
+type Node interface {
+	Print()
+}
 
-			if i+1 < len(fileContents) && fileContents[i+1] == '"' {
-				tokens = append(tokens,
-					Token{
-						tokenType: "STRING",
-						value:     string_token,
-					})
-				i++
-			} else if i+1 == len(fileContents) {
-				errCount++
-				fmt.Fprintf(os.Stderr, "[line %d] Error: Unterminated string.\n", lineCount)
-			}
-		} else if unicode.IsDigit(rune(x)) {
-			number_token := string(x)
-			number_formatted := ""
-			for i+1 < len(fileContents) && unicode.IsDigit(rune(fileContents[i+1])) {
-				i++
-				number_token += string(fileContents[i])
-			}
-			if i+1 < len(fileContents) && fileContents[i+1] == '.' {
-				i++
-				number_token += string(fileContents[i])
-				for i+1 < len(fileContents) && unicode.IsDigit(rune(fileContents[i+1])) {
-					i++
-					number_token += string(fileContents[i])
-				}
-				tmp_num, _ := strconv.ParseFloat(number_token, 64)
-				number_formatted = strconv.FormatFloat(tmp_num, 'g', -1, 64)
-				if math.Mod(tmp_num, 1) == 0 {
-					number_formatted = strconv.FormatFloat(tmp_num, 'g', -1, 64) + ".0"
-				}
+type StringNode struct {
+	Node
+	value string
+}
+type NumberNode struct {
+	Node
+	value string
+}
 
-			} else {
-				number_formatted = number_token + ".0"
-			}
-			tokens = append(tokens, Token{
-				tokenType: "NUMBER",
-				value:     number_formatted,
-			})
-		} else if ('a' <= x && x <= 'z') || x == '_' || ('A' <= x && x <= 'Z') {
-			str := ""
-			str += string(x)
-			for i+1 < len(fileContents) && (('a' <= fileContents[i+1] && fileContents[i+1] <= 'z') ||
-				fileContents[i+1] == '_' || ('0' <= fileContents[i+1] && fileContents[i+1] <= '9') || ('A' <= fileContents[i+1] && fileContents[i+1] <= 'Z')) {
-				i++
-				str += string(fileContents[i])
-			}
+type Group struct {
+	Node
+	nodes []Node
+}
 
-			if reservedWords[str] != "" {
-				tokens = append(tokens,
-					Token{
-						tokenType: reservedWords[str],
-						value:     str,
-					})
-			} else {
-				tokens = append(tokens, Token{
-					tokenType: "IDENTIFIER",
-					value:     str,
-				})
-			}
-		} else if x == '/' {
-			if i+1 < len(fileContents) && fileContents[i+1] == '/' {
-				for i+1 < len(fileContents) && fileContents[i+1] != '\n' {
-					i++
-				}
-			} else {
-				tokens = append(tokens, Token{
-					tokenType: "SLASH",
-					value:     string(x),
-				})
-			}
-		} else if x == ' ' || x == '\t' {
-			// Ignore whitespace
-		} else if x == '\n' {
-			lineCount++
-		} else {
-			fmt.Fprintf(os.Stderr, "[line %d] Error: Unexpected character: %c\n", lineCount, x)
-			errCount++
-		}
-	}
-
-	tokens = append(tokens, Token{tokenType: "EOF", value: ""})
-
-	// エラーが起こっていた場合は exit code 65 を返す
-	if errCount > 0 {
-		os.Exit(65)
-	}
-
-	return tokens
+type Unary struct {
+	Node
+	operator Token
+	right    Node
 }
 
 func Parse() {
@@ -180,21 +92,110 @@ func Parse() {
 		os.Exit(1)
 	}
 
-	ast := tokenize(fileContents)
-
-	for i := 0; i < len(ast); i++ {
-		token := ast[i]
-		if token.tokenType == "NIL" || token.tokenType == "TRUE" || token.tokenType == "FALSE" {
-			fmt.Printf(token.value)
-		} else if token.tokenType == "NUMBER" {
-			fmt.Printf(token.value)
-		} else if token.tokenType == "STRING" {
-			fmt.Printf(token.value)
-		} else if token.tokenType == "LEFT_PAREN" {
-			fmt.Printf(token.value)
-			fmt.Print("group ")
-		} else if token.tokenType == "RIGHT_PAREN" {
-			fmt.Printf(token.value)
-		}
+	parser := Parser{
+		tokens: tokenize(fileContents),
+		index:  0,
 	}
+
+	ast := parser.parse()
+	ast.Print()
+}
+
+// parse して構文木を作成する
+func (p *Parser) parse() AST {
+	ast := AST{}
+	var n []Node
+	for i := 0; i < len(p.tokens); i++ {
+		i, n = tokenToNode(p.tokens, i)
+		ast.nodes = append(ast.nodes, n...)
+	}
+
+	return ast
+}
+
+func tokenToNode(tokens []Token, i int) (int, []Node) {
+	token := tokens[i]
+	nodes := make([]Node, 0)
+
+	switch token.tokenType {
+	case "EOF":
+		return i, nodes
+	case "STRING":
+		nodes = append(nodes, &StringNode{value: token.value})
+	case "NUMBER":
+		nodes = append(nodes, &NumberNode{value: token.value})
+	case "LEFT_PAREN":
+		group := &Group{}
+		for i+1 < len(tokens) {
+			pt := tokens[i+1]
+			if pt.tokenType == "RIGHT_PAREN" {
+				i++
+				break
+			} else {
+				var n []Node
+				// 再帰で探す
+				// こいつを使用することで、group の nodes に RIGHT_PAREN までのノードを追加する
+				i, n = tokenToNode(tokens, i+1)
+				group.nodes = append(group.nodes, n...)
+			}
+		}
+		if i >= len(tokens) {
+			fmt.Errorf("invalid input. missing )")
+			os.Exit(65)
+			// TODO: error
+		}
+		nodes = append(nodes, group)
+	case "BANG":
+		u := &Unary{}
+		u.operator = token
+		var n []Node
+		i, n = tokenToNode(tokens, i+1)
+		u.right = n[0]
+		nodes = append(nodes, u)
+	case "MINUS":
+		u := &Unary{}
+		u.operator = token
+		var n []Node
+		i, n = tokenToNode(tokens, i+1)
+		if 1 < len(n)  {
+			fmt.Fprintf(os.Stderr, "invalid input. too many nodes")
+			os.Exit(65)
+		}
+		u.right = n[0]
+		nodes = append(nodes, u)
+	default:
+		nodes = append(nodes, &StringNode{value: token.value})
+		// fmt.Fprintf(os.Stderr, "Unknown token: %s\n", token.tokenType)
+	}
+	return i, nodes
+}
+
+func (a *AST) Print() {
+	for _, n := range a.nodes {
+		n.Print()
+		io.WriteString(os.Stdout, "\n")
+	}
+}
+
+func (u *Unary) Print() {
+	io.WriteString(os.Stdout, "(")
+	io.WriteString(os.Stdout, u.operator.value)
+	io.WriteString(os.Stdout, " ")
+	u.right.Print()
+	io.WriteString(os.Stdout, ")")
+}
+
+func (g *Group) Print() {
+	io.WriteString(os.Stdout, "(")
+	io.WriteString(os.Stdout, "group ")
+	for _, n := range g.nodes {
+		n.Print()
+	}
+	io.WriteString(os.Stdout, ")")
+}
+func (s *StringNode) Print() {
+	io.WriteString(os.Stdout, s.value)
+}
+func (n *NumberNode) Print() {
+	io.WriteString(os.Stdout, n.value)
 }
