@@ -187,6 +187,8 @@ func Parse() {
 			fmt.Printf(token.value)
 		} else if token.tokenType == "NUMBER" {
 			fmt.Printf(token.value)
+		} else if token.tokenType == "STRING" {
+			fmt.Printf(token.value)
 		}
 	}
 }
