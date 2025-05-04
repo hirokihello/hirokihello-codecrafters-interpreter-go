@@ -73,6 +73,16 @@ type NumberNode struct {
 	value string
 }
 
+type BooleanNode struct {
+	Node
+	value string
+}
+
+type NilNode struct {
+	Node
+	value string
+}
+
 type Group struct {
 	Node
 	nodes []Node
@@ -80,6 +90,13 @@ type Group struct {
 
 type Unary struct {
 	Node
+	operator Token
+	right    Node
+}
+
+type Binary struct {
+	Node
+	left     Node
 	operator Token
 	right    Node
 }
@@ -104,72 +121,155 @@ func Parse() {
 // parse して構文木を作成する
 func (p *Parser) parse() AST {
 	ast := AST{}
-	var n []Node
-	for i := 0; i < len(p.tokens); i++ {
-		i, n = tokenToNode(p.tokens, i)
-		ast.nodes = append(ast.nodes, n...)
-	}
-
+	var node Node
+	node, _ = p.parseExpression(0)
+	ast.nodes = append(ast.nodes, node)
 	return ast
 }
 
-func tokenToNode(tokens []Token, i int) (int, []Node) {
-	token := tokens[i]
-	nodes := make([]Node, 0)
-
-	switch token.tokenType {
-	case "EOF":
-		return i, nodes
-	case "STRING":
-		nodes = append(nodes, &StringNode{value: token.value})
-	case "NUMBER":
-		nodes = append(nodes, &NumberNode{value: token.value})
-	case "LEFT_PAREN":
-		group := &Group{}
-		for i+1 < len(tokens) {
-			pt := tokens[i+1]
-			if pt.tokenType == "RIGHT_PAREN" {
-				i++
-				break
-			} else {
-				var n []Node
-				// 再帰で探す
-				// こいつを使用することで、group の nodes に RIGHT_PAREN までのノードを追加する
-				i, n = tokenToNode(tokens, i+1)
-				group.nodes = append(group.nodes, n...)
-			}
-		}
-		if i >= len(tokens) {
-			fmt.Errorf("invalid input. missing )")
-			os.Exit(65)
-			// TODO: error
-		}
-		nodes = append(nodes, group)
-	case "BANG":
-		u := &Unary{}
-		u.operator = token
-		var n []Node
-		i, n = tokenToNode(tokens, i+1)
-		u.right = n[0]
-		nodes = append(nodes, u)
-	case "MINUS":
-		u := &Unary{}
-		u.operator = token
-		var n []Node
-		i, n = tokenToNode(tokens, i+1)
-		if 1 < len(n)  {
-			fmt.Fprintf(os.Stderr, "invalid input. too many nodes")
-			os.Exit(65)
-		}
-		u.right = n[0]
-		nodes = append(nodes, u)
-	default:
-		nodes = append(nodes, &StringNode{value: token.value})
-		// fmt.Fprintf(os.Stderr, "Unknown token: %s\n", token.tokenType)
-	}
-	return i, nodes
+func (p *Parser) parseExpression(index int) (Node, int) {
+	var node Node
+	node, index = p.parseEquality(index)
+	return node, index
 }
 
+func (p *Parser) parseEquality(index int) (Node, int) {
+	left, index := p.parseComparison(index)
+
+	token := p.tokens[index]
+	for token.tokenType == "EQUAL_EQUAL" || token.tokenType == "BANG_EQUAL" {
+		var right Node
+		right, index = p.parseComparison(index + 1)
+		left = &Binary{
+			left:     left,
+			operator: token,
+			right:    right,
+		}
+	}
+
+	return left, index
+}
+
+func (p *Parser) parseComparison(index int) (Node, int) {
+	var left Node
+	left, index = p.parseTerm(index)
+
+	token := p.tokens[index]
+	for token.tokenType == "LESS" || token.tokenType == "LESS_EQUAL" ||
+		token.tokenType == "GREATER" || token.tokenType == "GREATER_EQUAL" {
+		var right Node
+		right, index = p.parseTerm(index + 1)
+		left = &Binary{
+			left:     left,
+			operator: token,
+			right:    right,
+		}
+		// 次のループに備えて token を更新する
+		token = p.tokens[index]
+	}
+	return left, index
+}
+
+func (p *Parser) parseTerm(index int) (Node, int) {
+	var left Node
+	left, index = p.parseFactor(index)
+
+	token := p.tokens[index]
+	for token.tokenType == "PLUS" || token.tokenType == "MINUS" {
+		var right Node
+		right, index = p.parseFactor(index + 1)
+		left = &Binary{
+			left:     left,
+			operator: token,
+			right:    right,
+		}
+		// 次のループに備えて token を更新する
+		token = p.tokens[index]
+	}
+
+	return left, index
+}
+
+func (p *Parser) parseFactor(index int) (Node, int) {
+	var left Node
+	left, index = p.parseUnary(index)
+
+	token := p.tokens[index]
+	for token.tokenType == "STAR" || token.tokenType == "SLASH" {
+		var right Node
+		right, index = p.parseUnary(index + 1)
+		left = &Binary{
+			left:     left,
+			operator: token,
+			right:    right,
+		}
+		// 次のループに備えて token を更新する
+		token = p.tokens[index]
+	}
+
+	return left, index
+}
+
+func (p *Parser) parseUnary(index int) (Node, int) {
+	if index >= len(p.tokens) {
+		panic ("Index out of range")
+	}
+	token := p.tokens[index]
+	for token.tokenType == "BANG" || token.tokenType == "MINUS" {
+		var right Node
+		right, index = p.parseUnary(index + 1)
+		return &Unary{
+			operator: token,
+			right:    right,
+		}, index
+	}
+
+	return p.parsePrimary(index)
+}
+func (p *Parser) parsePrimary(index int) (Node, int) {
+	token := p.tokens[index]
+
+	if token.tokenType == "NIL" {
+		return &NilNode{
+			value: token.value,
+		}, index + 1
+	}
+
+	if token.tokenType == "TRUE" || token.tokenType == "FALSE" {
+		return &BooleanNode{
+			value: token.value,
+		}, index + 1
+	}
+
+	if token.tokenType == "NUMBER" {
+		return &NumberNode{
+			value: token.value,
+		}, index + 1
+	}
+
+	if token.tokenType == "STRING" {
+		return &StringNode{
+			value: token.value,
+		}, index + 1
+	}
+
+	if token.tokenType == "LEFT_PAREN" {
+		var expression Node
+		expression, index = p.parseExpression(index + 1)
+		if p.tokens[index].tokenType == "RIGHT_PAREN" {
+			return &Group{
+				nodes: []Node{expression},
+			}, index + 1
+		}
+		return expression, index + 1
+	}
+
+	fmt.Printf("Unexpected token: %s\n", token.value)
+	fmt.Printf("Unexpected tokenType: %s\n", token.tokenType)
+	panic("Unhandled primary expression case")
+}
+
+// Print methods for AST and nodes
 func (a *AST) Print() {
 	for _, n := range a.nodes {
 		n.Print()
@@ -198,4 +298,20 @@ func (s *StringNode) Print() {
 }
 func (n *NumberNode) Print() {
 	io.WriteString(os.Stdout, n.value)
+}
+func (n *BooleanNode) Print() {
+	io.WriteString(os.Stdout, n.value)
+}
+func (n *NilNode) Print() {
+	io.WriteString(os.Stdout, n.value)
+}
+
+func (b *Binary) Print() {
+	io.WriteString(os.Stdout, "(")
+	io.WriteString(os.Stdout, b.operator.value)
+	io.WriteString(os.Stdout, " ")
+	b.left.Print()
+	io.WriteString(os.Stdout, " ")
+	b.right.Print()
+	io.WriteString(os.Stdout, ")")
 }
