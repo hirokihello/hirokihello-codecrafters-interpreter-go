@@ -145,6 +145,8 @@ func (p *Parser) parseEquality(index int) (Node, int) {
 			operator: token,
 			right:    right,
 		}
+		// 次のループに備えて token を更新する
+		token = p.tokens[index]
 	}
 
 	return left, index
