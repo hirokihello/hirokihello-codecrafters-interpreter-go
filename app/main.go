@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/codecrafters-io/interpreter-starter-go/app/evaluate"
 	"github.com/codecrafters-io/interpreter-starter-go/app/parse"
 	"github.com/codecrafters-io/interpreter-starter-go/app/token"
 )
@@ -19,7 +20,7 @@ func main() {
 
 	command := os.Args[1]
 
-	if command != "parse" && command != "tokenize" {
+	if command != "parse" && command != "tokenize" && command != "evaluate" {
 		fmt.Fprintf(os.Stderr, "Unknown command: %s\n", command)
 		os.Exit(1)
 	}
@@ -30,5 +31,9 @@ func main() {
 
 	if command == "parse" {
 		parse.Parse()
+	}
+
+	if command == "evaluate" {
+		evaluate.Evaluate()
 	}
 }
