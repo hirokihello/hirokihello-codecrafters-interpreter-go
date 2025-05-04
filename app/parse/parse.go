@@ -191,15 +191,10 @@ func Parse() {
 		} else if token.tokenType == "STRING" {
 			fmt.Printf(token.value)
 		} else if token.tokenType == "LEFT_PAREN" {
-			if i+2 < len(ast) && ast[i+1].tokenType == "STRING" && ast[i+2].tokenType == "RIGHT_PAREN" {
-				fmt.Printf(token.value)
-				fmt.Printf("group ")
-				fmt.Printf(ast[i+1].value)
-				fmt.Printf(ast[i+2].value)
-				i += 2
-			} else {
-				fmt.Printf(token.value)
-			}
+			fmt.Printf(token.value)
+			fmt.Print("group ")
+		} else if token.tokenType == "RIGHT_PAREN" {
+			fmt.Printf(token.value)
 		}
 	}
 }
