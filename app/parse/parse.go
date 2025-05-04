@@ -122,24 +122,39 @@ func Parse() {
 func (p *Parser) parse() AST {
 	ast := AST{}
 	var node Node
-	node, _ = p.parseExpression(0)
+	err := error(nil)
+	node, _, err = p.parseExpression(0)
+	if err != nil {
+		os.Exit(65)
+	}
 	ast.nodes = append(ast.nodes, node)
 	return ast
 }
 
-func (p *Parser) parseExpression(index int) (Node, int) {
+func (p *Parser) parseExpression(index int) (Node, int, error) {
 	var node Node
-	node, index = p.parseEquality(index)
-	return node, index
+	err := error(nil)
+	node, index, err = p.parseEquality(index)
+	if err != nil {
+		return nil, index, err
+	}
+	return node, index, nil
 }
 
-func (p *Parser) parseEquality(index int) (Node, int) {
-	left, index := p.parseComparison(index)
+func (p *Parser) parseEquality(index int) (Node, int, error) {
+	err := error(nil)
+	left, index, err := p.parseComparison(index)
 
+	if err != nil {
+		return nil, index, err
+	}
 	token := p.tokens[index]
 	for token.tokenType == "EQUAL_EQUAL" || token.tokenType == "BANG_EQUAL" {
 		var right Node
-		right, index = p.parseComparison(index + 1)
+		right, index, err = p.parseComparison(index + 1)
+		if err != nil {
+			return nil, index, err
+		}
 		left = &Binary{
 			left:     left,
 			operator: token,
@@ -149,18 +164,24 @@ func (p *Parser) parseEquality(index int) (Node, int) {
 		token = p.tokens[index]
 	}
 
-	return left, index
+	return left, index, nil
 }
 
-func (p *Parser) parseComparison(index int) (Node, int) {
+func (p *Parser) parseComparison(index int) (Node, int, error) {
+	err := error(nil)
 	var left Node
-	left, index = p.parseTerm(index)
-
+	left, index, err = p.parseTerm(index)
+	if err != nil {
+		return nil, index, err
+	}
 	token := p.tokens[index]
 	for token.tokenType == "LESS" || token.tokenType == "LESS_EQUAL" ||
 		token.tokenType == "GREATER" || token.tokenType == "GREATER_EQUAL" {
 		var right Node
-		right, index = p.parseTerm(index + 1)
+		right, index, err = p.parseTerm(index + 1)
+		if err != nil {
+			return nil, index, err
+		}
 		left = &Binary{
 			left:     left,
 			operator: token,
@@ -169,17 +190,24 @@ func (p *Parser) parseComparison(index int) (Node, int) {
 		// 次のループに備えて token を更新する
 		token = p.tokens[index]
 	}
-	return left, index
+	return left, index, nil
 }
 
-func (p *Parser) parseTerm(index int) (Node, int) {
+func (p *Parser) parseTerm(index int) (Node, int, error) {
+	err := error(nil)
 	var left Node
-	left, index = p.parseFactor(index)
+	left, index, err = p.parseFactor(index)
 
+	if err != nil {
+		return nil, index, err
+	}
 	token := p.tokens[index]
 	for token.tokenType == "PLUS" || token.tokenType == "MINUS" {
 		var right Node
-		right, index = p.parseFactor(index + 1)
+		right, index, err = p.parseFactor(index + 1)
+		if err != nil {
+			return nil, index, err
+		}
 		left = &Binary{
 			left:     left,
 			operator: token,
@@ -189,17 +217,24 @@ func (p *Parser) parseTerm(index int) (Node, int) {
 		token = p.tokens[index]
 	}
 
-	return left, index
+	return left, index, nil
 }
 
-func (p *Parser) parseFactor(index int) (Node, int) {
+func (p *Parser) parseFactor(index int) (Node, int, error) {
+	err := error(nil)
 	var left Node
-	left, index = p.parseUnary(index)
+	left, index, err = p.parseUnary(index)
+	if err != nil {
+		return nil, index, err
+	}
 
 	token := p.tokens[index]
 	for token.tokenType == "STAR" || token.tokenType == "SLASH" {
 		var right Node
-		right, index = p.parseUnary(index + 1)
+		right, index, err = p.parseUnary(index + 1)
+		if err != nil {
+			return nil, index, err
+		}
 		left = &Binary{
 			left:     left,
 			operator: token,
@@ -209,66 +244,67 @@ func (p *Parser) parseFactor(index int) (Node, int) {
 		token = p.tokens[index]
 	}
 
-	return left, index
+	return left, index, nil
 }
 
-func (p *Parser) parseUnary(index int) (Node, int) {
+func (p *Parser) parseUnary(index int) (Node, int, error) {
+	err := error(nil)
 	if index >= len(p.tokens) {
-		panic ("Index out of range")
+		panic("Index out of range")
 	}
 	token := p.tokens[index]
 	for token.tokenType == "BANG" || token.tokenType == "MINUS" {
 		var right Node
-		right, index = p.parseUnary(index + 1)
+		right, index, err = p.parseUnary(index + 1)
+		if err != nil {
+			return nil, index, err
+		}
 		return &Unary{
 			operator: token,
 			right:    right,
-		}, index
+		}, index, nil
 	}
 
 	return p.parsePrimary(index)
 }
-func (p *Parser) parsePrimary(index int) (Node, int) {
+func (p *Parser) parsePrimary(index int) (Node, int, error) {
 	token := p.tokens[index]
 
 	if token.tokenType == "NIL" {
 		return &NilNode{
 			value: token.value,
-		}, index + 1
+		}, index + 1, nil
 	}
 
 	if token.tokenType == "TRUE" || token.tokenType == "FALSE" {
 		return &BooleanNode{
 			value: token.value,
-		}, index + 1
+		}, index + 1, nil
 	}
 
 	if token.tokenType == "NUMBER" {
 		return &NumberNode{
 			value: token.value,
-		}, index + 1
+		}, index + 1, nil
 	}
 
 	if token.tokenType == "STRING" {
 		return &StringNode{
 			value: token.value,
-		}, index + 1
+		}, index + 1, nil
 	}
 
 	if token.tokenType == "LEFT_PAREN" {
 		var expression Node
-		expression, index = p.parseExpression(index + 1)
+		expression, index, _ = p.parseExpression(index + 1)
 		if p.tokens[index].tokenType == "RIGHT_PAREN" {
 			return &Group{
 				nodes: []Node{expression},
-			}, index + 1
+			}, index + 1, nil
 		}
-		return expression, index + 1
+		return expression, index + 1, fmt.Errorf("missing right parenthesis")
 	}
-
-	fmt.Printf("Unexpected token: %s\n", token.value)
-	fmt.Printf("Unexpected tokenType: %s\n", token.tokenType)
-	panic("Unhandled primary expression case")
+	return nil, index + 1, fmt.Errorf("unexpected token: %s", token.value)
 }
 
 // Print methods for AST and nodes
