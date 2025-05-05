@@ -7,46 +7,62 @@ import (
 
 func Evaluate() {
 	ast := Parse()
-	ast.Print()
+	ast.GetValue()
 }
 
 // Print methods for AST and nodes
-func (a *AST) Print() {
+func (a *AST) GetValue() {
 	for _, n := range a.nodes {
-		n.Print()
+		io.WriteString(os.Stdout, n.getValue())
 		io.WriteString(os.Stdout, "\n")
 	}
 }
 
-func (u *Unary) Print() {
-	io.WriteString(os.Stdout, u.operator.value)
-	u.right.Print()
-}
-
-func (g *Group) Print() {
-	for _, n := range g.nodes {
-		n.Print()
+func (u *Unary) getValue() string {
+	if u.operator.tokenType == "MINUS" {
+		return "-" + u.right.getValue()
+	} else if u.operator.tokenType == "BANG" {
+		if u.right.getValue() == "false" || u.right.getValue() == "" || u.right.getValue() == "nil" {
+			return "true"
+		} else {
+			return "false"
+		}
 	}
-}
-func (s *StringNode) Print() {
-	io.WriteString(os.Stdout, s.value)
-}
-func (n *NumberNode) Print() {
-	io.WriteString(os.Stdout, n.value)
-}
-func (n *BooleanNode) Print() {
-	io.WriteString(os.Stdout, n.value)
-}
-func (n *NilNode) Print() {
-	io.WriteString(os.Stdout, n.value)
+
+	panic("Unknown operator: " + u.operator.tokenType)
 }
 
-func (b *Binary) Print() {
+func (g *Group) getValue() string {
+	values := ""
+	for i, n := range g.nodes {
+		if i != 0 {
+			values += " "
+		}
+		values += n.getValue()
+	}
+	return values
+}
+func (s *StringNode) getValue() string {
+	return s.value
+}
+func (n *NumberNode) getValue() string {
+	return n.value
+}
+func (b *BooleanNode) getValue() string {
+	return b.value
+}
+func (n *NilNode) getValue() string {
+	return n.value
+}
+
+// binary については一旦考えない
+func (b *Binary) getValue() string {
 	io.WriteString(os.Stdout, "(")
 	io.WriteString(os.Stdout, b.operator.value)
 	io.WriteString(os.Stdout, " ")
-	b.left.Print()
+	b.left.getValue()
 	io.WriteString(os.Stdout, " ")
-	b.right.Print()
+	b.right.getValue()
 	io.WriteString(os.Stdout, ")")
+	return ""
 }

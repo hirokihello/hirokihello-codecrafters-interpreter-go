@@ -60,7 +60,7 @@ type AST struct {
 }
 
 type Node interface {
-	Print()
+	getValue() string
 }
 
 type StringNode struct {
