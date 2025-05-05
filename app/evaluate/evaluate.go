@@ -1,6 +1,7 @@
 package evaluate
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"strconv"
@@ -44,16 +45,23 @@ func (u *Unary) getValue() EvaluateNode {
 }
 
 func (g *Group) getValue() EvaluateNode {
-	values := ""
-	for i, n := range g.nodes {
-		if i != 0 {
-			values += " "
+	if len(g.nodes) == 1 {
+		return EvaluateNode{
+			value: g.nodes[0].getValue().value,
+			valueType: g.nodes[0].getValue().valueType,
 		}
-		values += n.getValue().value
-	}
-	return EvaluateNode{
-		value:     values,
-		valueType: STRING,
+	} else {
+		values := ""
+		for i, n := range g.nodes {
+			if i != 0 {
+				values += " "
+			}
+			values += n.getValue().value
+		}
+		return EvaluateNode{
+			value:     values,
+			valueType: STRING,
+		}
 	}
 }
 
@@ -175,7 +183,7 @@ func (b *Binary) getValue() EvaluateNode {
 			}
 		}
 	} else if b.operator.tokenType == EQUAL_EQUAL {
-		if b.left.getValue().value == b.right.getValue().value {
+		if b.left.getValue().value == b.right.getValue().value && b.left.getValue().valueType == b.right.getValue().valueType {
 			return EvaluateNode{
 				value:     "true",
 				valueType: BOOLEAN,
@@ -187,7 +195,7 @@ func (b *Binary) getValue() EvaluateNode {
 			}
 		}
 	} else if b.operator.tokenType == BANG_EQUAL {
-		if b.left.getValue().value != b.right.getValue().value {
+		if b.left.getValue().value != b.right.getValue().value || b.left.getValue().valueType != b.right.getValue().valueType  {
 			return EvaluateNode{
 				value:     "true",
 				valueType: BOOLEAN,
