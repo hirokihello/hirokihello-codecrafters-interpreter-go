@@ -3,6 +3,7 @@ package evaluate
 import (
 	"io"
 	"os"
+	"strconv"
 )
 
 func Evaluate() {
@@ -57,12 +58,13 @@ func (n *NilNode) getValue() string {
 
 // binary については一旦考えない
 func (b *Binary) getValue() string {
-	io.WriteString(os.Stdout, "(")
-	io.WriteString(os.Stdout, b.operator.value)
-	io.WriteString(os.Stdout, " ")
-	b.left.getValue()
-	io.WriteString(os.Stdout, " ")
-	b.right.getValue()
-	io.WriteString(os.Stdout, ")")
-	return ""
+	left, _ := strconv.Atoi(b.left.getValue())
+	right, _ := strconv.Atoi(b.right.getValue())
+	if b.operator.tokenType == "SLASH" {
+		return strconv.Itoa(left / right)
+	} else if b.operator.tokenType == "STAR"{
+		return strconv.Itoa(left * right)
+	}
+
+	panic("Unknown operator: " + b.operator.tokenType)
 }
