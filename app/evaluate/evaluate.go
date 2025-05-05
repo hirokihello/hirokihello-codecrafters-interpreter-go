@@ -95,28 +95,7 @@ func (n *NilNode) getValue() EvaluateNode {
 }
 
 func (b *Binary) getValue() EvaluateNode {
-	if b.operator.tokenType == SLASH {
-		left, _ := strconv.ParseFloat(b.left.getValue().value, 10)
-		right, _ := strconv.ParseFloat(b.right.getValue().value, 10)
-		return EvaluateNode{
-			value:     strconv.FormatFloat(left/right, 'f', -1, 64),
-			valueType: NUMBER,
-		}
-	} else if b.operator.tokenType == STAR {
-		left, _ := strconv.ParseFloat(b.left.getValue().value, 10)
-		right, _ := strconv.ParseFloat(b.right.getValue().value, 10)
-		return EvaluateNode{
-			value:     strconv.FormatFloat(left*right, 'f', -1, 64),
-			valueType: NUMBER,
-		}
-	} else if b.operator.tokenType == MINUS {
-		left, _ := strconv.ParseFloat(b.left.getValue().value, 10)
-		right, _ := strconv.ParseFloat(b.right.getValue().value, 10)
-		return EvaluateNode{
-			value:     strconv.FormatFloat(left-right, 'f', -1, 64),
-			valueType: NUMBER,
-		}
-	} else if b.operator.tokenType == PLUS {
+	if b.operator.tokenType == PLUS {
 		if b.left.getValue().valueType == STRING {
 			return EvaluateNode{
 				value:     b.left.getValue().value + b.right.getValue().value,
@@ -130,9 +109,38 @@ func (b *Binary) getValue() EvaluateNode {
 				valueType: NUMBER,
 			}
 		}
+	}
+
+	left, _ := strconv.ParseFloat(b.left.getValue().value, 10)
+	right, _ := strconv.ParseFloat(b.right.getValue().value, 10)
+	if b.operator.tokenType == SLASH {
+		if b.left.getValue().valueType != NUMBER || b.right.getValue().valueType != NUMBER {
+			fmt.Fprintf(os.Stderr, "Operands must be numbers.")
+			os.Exit(70)
+		}
+		return EvaluateNode{
+			value:     strconv.FormatFloat(left/right, 'f', -1, 64),
+			valueType: NUMBER,
+		}
+	} else if b.operator.tokenType == STAR {
+		if b.left.getValue().valueType != NUMBER || b.right.getValue().valueType != NUMBER {
+			fmt.Fprintf(os.Stderr, "Operands must be numbers.")
+			os.Exit(70)
+		}
+		return EvaluateNode{
+			value:     strconv.FormatFloat(left*right, 'f', -1, 64),
+			valueType: NUMBER,
+		}
+	} else if b.operator.tokenType == MINUS {
+		if b.left.getValue().valueType != NUMBER || b.right.getValue().valueType != NUMBER {
+			fmt.Fprintf(os.Stderr, "Operands must be numbers.")
+			os.Exit(70)
+		}
+		return EvaluateNode{
+			value:     strconv.FormatFloat(left-right, 'f', -1, 64),
+			valueType: NUMBER,
+		}
 	} else if b.operator.tokenType == GREATER {
-		left, _ := strconv.ParseFloat(b.left.getValue().value, 10)
-		right, _ := strconv.ParseFloat(b.right.getValue().value, 10)
 		if left > right {
 			return EvaluateNode{
 				value:     "true",
@@ -145,8 +153,6 @@ func (b *Binary) getValue() EvaluateNode {
 			}
 		}
 	} else if b.operator.tokenType == GREATER_EQUAL {
-		left, _ := strconv.ParseFloat(b.left.getValue().value, 10)
-		right, _ := strconv.ParseFloat(b.right.getValue().value, 10)
 		if left >= right {
 			return EvaluateNode{
 				value:     "true",
@@ -159,8 +165,6 @@ func (b *Binary) getValue() EvaluateNode {
 			}
 		}
 	} else if b.operator.tokenType == LESS {
-		left, _ := strconv.ParseFloat(b.left.getValue().value, 10)
-		right, _ := strconv.ParseFloat(b.right.getValue().value, 10)
 		if left < right {
 			return EvaluateNode{
 				value:     "true",
@@ -173,8 +177,6 @@ func (b *Binary) getValue() EvaluateNode {
 			}
 		}
 	} else if b.operator.tokenType == LESS_EQUAL {
-		left, _ := strconv.ParseFloat(b.left.getValue().value, 10)
-		right, _ := strconv.ParseFloat(b.right.getValue().value, 10)
 		if left <= right {
 			return EvaluateNode{
 				value:     "true",
