@@ -1,7 +1,6 @@
 package evaluate
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"strconv"
@@ -47,7 +46,7 @@ func (u *Unary) getValue() EvaluateNode {
 func (g *Group) getValue() EvaluateNode {
 	if len(g.nodes) == 1 {
 		return EvaluateNode{
-			value: g.nodes[0].getValue().value,
+			value:     g.nodes[0].getValue().value,
 			valueType: g.nodes[0].getValue().valueType,
 		}
 	} else {
@@ -195,7 +194,7 @@ func (b *Binary) getValue() EvaluateNode {
 			}
 		}
 	} else if b.operator.tokenType == BANG_EQUAL {
-		if b.left.getValue().value != b.right.getValue().value || b.left.getValue().valueType != b.right.getValue().valueType  {
+		if b.left.getValue().value != b.right.getValue().value || b.left.getValue().valueType != b.right.getValue().valueType {
 			return EvaluateNode{
 				value:     "true",
 				valueType: BOOLEAN,
