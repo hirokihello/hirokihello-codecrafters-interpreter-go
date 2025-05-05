@@ -82,7 +82,6 @@ func (n *NilNode) getValue() EvaluateNode {
 	}
 }
 
-// binary については一旦考えない
 func (b *Binary) getValue() EvaluateNode {
 	if b.operator.tokenType == SLASH {
 		left, _ := strconv.ParseFloat(b.left.getValue().value, 10)
@@ -111,12 +110,93 @@ func (b *Binary) getValue() EvaluateNode {
 				value:     b.left.getValue().value + b.right.getValue().value,
 				valueType: STRING,
 			}
+		} else if b.left.getValue().valueType == NUMBER {
+			left, _ := strconv.ParseFloat(b.left.getValue().value, 10)
+			right, _ := strconv.ParseFloat(b.right.getValue().value, 10)
+			return EvaluateNode{
+				value:     strconv.FormatFloat(left+right, 'f', -1, 64),
+				valueType: NUMBER,
+			}
 		}
+	} else if b.operator.tokenType == GREATER {
 		left, _ := strconv.ParseFloat(b.left.getValue().value, 10)
 		right, _ := strconv.ParseFloat(b.right.getValue().value, 10)
-		return EvaluateNode{
-			value:     strconv.FormatFloat(left+right, 'f', -1, 64),
-			valueType: NUMBER,
+		if left > right {
+			return EvaluateNode{
+				value:     "true",
+				valueType: BOOLEAN,
+			}
+		} else {
+			return EvaluateNode{
+				value:     "false",
+				valueType: BOOLEAN,
+			}
+		}
+	} else if b.operator.tokenType == GREATER_EQUAL {
+		left, _ := strconv.ParseFloat(b.left.getValue().value, 10)
+		right, _ := strconv.ParseFloat(b.right.getValue().value, 10)
+		if left >= right {
+			return EvaluateNode{
+				value:     "true",
+				valueType: BOOLEAN,
+			}
+		} else {
+			return EvaluateNode{
+				value:     "false",
+				valueType: BOOLEAN,
+			}
+		}
+	} else if b.operator.tokenType == LESS {
+		left, _ := strconv.ParseFloat(b.left.getValue().value, 10)
+		right, _ := strconv.ParseFloat(b.right.getValue().value, 10)
+		if left < right {
+			return EvaluateNode{
+				value:     "true",
+				valueType: BOOLEAN,
+			}
+		} else {
+			return EvaluateNode{
+				value:     "false",
+				valueType: BOOLEAN,
+			}
+		}
+	} else if b.operator.tokenType == LESS_EQUAL {
+		left, _ := strconv.ParseFloat(b.left.getValue().value, 10)
+		right, _ := strconv.ParseFloat(b.right.getValue().value, 10)
+		if left <= right {
+			return EvaluateNode{
+				value:     "true",
+				valueType: BOOLEAN,
+			}
+		} else {
+			return EvaluateNode{
+				value:     "false",
+				valueType: BOOLEAN,
+			}
+		}
+	} else if b.operator.tokenType == EQUAL_EQUAL {
+		if b.left.getValue().value == b.right.getValue().value {
+			return EvaluateNode{
+				value:     "true",
+				valueType: BOOLEAN,
+			}
+		} else {
+			return EvaluateNode{
+				value:     "false",
+				valueType: BOOLEAN,
+			}
+		}
+	} else if b.operator.tokenType == BANG_EQUAL {
+		if b.left.getValue().value != b.right.getValue().value {
+			return EvaluateNode{
+				value:     "true",
+				valueType: BOOLEAN,
+			}
+		} else {
+			return EvaluateNode{
+				value:     "false",
+				valueType: BOOLEAN,
+			}
 		}
 	}
 
