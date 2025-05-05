@@ -14,61 +14,110 @@ func Evaluate() {
 // Print methods for AST and nodes
 func (a *AST) GetValue() {
 	for _, n := range a.nodes {
-		io.WriteString(os.Stdout, n.getValue())
+		io.WriteString(os.Stdout, n.getValue().value)
 		io.WriteString(os.Stdout, "\n")
 	}
 }
 
-func (u *Unary) getValue() string {
-	if u.operator.tokenType == "MINUS" {
-		num, _ := strconv.Atoi(u.right.getValue())
-		return strconv.FormatFloat(float64(num*-1), 'f', -1, 64)
-	} else if u.operator.tokenType == "BANG" {
-		if u.right.getValue() == "false" || u.right.getValue() == "" || u.right.getValue() == "nil" {
-			return "true"
+func (u *Unary) getValue() EvaluateNode {
+	if u.operator.tokenType == MINUS {
+		num, _ := strconv.Atoi(u.right.getValue().value)
+		return EvaluateNode{
+			value:     strconv.FormatFloat(float64(num*-1), 'f', -1, 64),
+			valueType: NUMBER,
+		}
+	} else if u.operator.tokenType == BANG {
+		if u.right.getValue().value == "false" || u.right.getValue().value == "" || u.right.getValue().value == "nil" {
+			return EvaluateNode{
+				value:     "true",
+				valueType: BOOLEAN,
+			}
 		} else {
-			return "false"
+			return EvaluateNode{
+				value:     "false",
+				valueType: BOOLEAN,
+			}
 		}
 	}
 
 	panic("Unknown operator: " + u.operator.tokenType)
 }
 
-func (g *Group) getValue() string {
+func (g *Group) getValue() EvaluateNode {
 	values := ""
 	for i, n := range g.nodes {
 		if i != 0 {
 			values += " "
 		}
-		values += n.getValue()
+		values += n.getValue().value
 	}
-	return values
+	return EvaluateNode{
+		value:     values,
+		valueType: STRING,
+	}
 }
-func (s *StringNode) getValue() string {
-	return s.value
+
+func (s *StringNode) getValue() EvaluateNode {
+	return EvaluateNode{
+		value:     s.value,
+		valueType: STRING,
+	}
 }
-func (n *NumberNode) getValue() string {
-	return n.value
+func (n *NumberNode) getValue() EvaluateNode {
+	return EvaluateNode{
+		value:     n.value,
+		valueType: NUMBER,
+	}
 }
-func (b *BooleanNode) getValue() string {
-	return b.value
+func (b *BooleanNode) getValue() EvaluateNode {
+	return EvaluateNode{
+		value:     b.value,
+		valueType: BOOLEAN,
+	}
 }
-func (n *NilNode) getValue() string {
-	return n.value
+func (n *NilNode) getValue() EvaluateNode {
+	return EvaluateNode{
+		value:     n.value,
+		valueType: NIL,
+	}
 }
 
 // binary については一旦考えない
-func (b *Binary) getValue() string {
-	left, _ := strconv.ParseFloat(b.left.getValue(), 10)
-	right, _ := strconv.ParseFloat(b.right.getValue(), 10)
-	if b.operator.tokenType == "SLASH" {
-		return strconv.FormatFloat(left/right, 'f', -1, 64)
-	} else if b.operator.tokenType == "STAR" {
-		return strconv.FormatFloat(left*right, 'f', -1, 64)
-	} else if b.operator.tokenType == "MINUS" {
-		return strconv.FormatFloat(left-right, 'f', -1, 64)
-	} else if b.operator.tokenType == "PLUS" {
-		return strconv.FormatFloat(left+right, 'f', -1, 64)
+func (b *Binary) getValue() EvaluateNode {
+	if b.operator.tokenType == SLASH {
+		left, _ := strconv.ParseFloat(b.left.getValue().value, 10)
+		right, _ := strconv.ParseFloat(b.right.getValue().value, 10)
+		return EvaluateNode{
+			value:     strconv.FormatFloat(left/right, 'f', -1, 64),
+			valueType: NUMBER,
+		}
+	} else if b.operator.tokenType == STAR {
+		left, _ := strconv.ParseFloat(b.left.getValue().value, 10)
+		right, _ := strconv.ParseFloat(b.right.getValue().value, 10)
+		return EvaluateNode{
+			value:     strconv.FormatFloat(left*right, 'f', -1, 64),
+			valueType: NUMBER,
+		}
+	} else if b.operator.tokenType == MINUS {
+		left, _ := strconv.ParseFloat(b.left.getValue().value, 10)
+		right, _ := strconv.ParseFloat(b.right.getValue().value, 10)
+		return EvaluateNode{
+			value:     strconv.FormatFloat(left-right, 'f', -1, 64),
+			valueType: NUMBER,
+		}
+	} else if b.operator.tokenType == PLUS {
+		if b.left.getValue().valueType == STRING {
+			return EvaluateNode{
+				value:     b.left.getValue().value + b.right.getValue().value,
+				valueType: STRING,
+			}
+		}
+		left, _ := strconv.ParseFloat(b.left.getValue().value, 10)
+		right, _ := strconv.ParseFloat(b.right.getValue().value, 10)
+		return EvaluateNode{
+			value:     strconv.FormatFloat(left+right, 'f', -1, 64),
+			valueType: NUMBER,
+		}
 	}
 
 	panic("Unknown operator: " + b.operator.tokenType)
