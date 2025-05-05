@@ -27,12 +27,9 @@ func (u *Unary) Print() {
 }
 
 func (g *Group) Print() {
-	io.WriteString(os.Stdout, "(")
-	io.WriteString(os.Stdout, "group ")
 	for _, n := range g.nodes {
 		n.Print()
 	}
-	io.WriteString(os.Stdout, ")")
 }
 func (s *StringNode) Print() {
 	io.WriteString(os.Stdout, s.value)
