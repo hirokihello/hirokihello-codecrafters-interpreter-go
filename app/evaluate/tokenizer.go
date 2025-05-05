@@ -2,7 +2,6 @@ package evaluate
 
 import (
 	"fmt"
-	"math"
 	"os"
 	"strconv"
 	"unicode"
@@ -64,12 +63,8 @@ func tokenize(fileContents []byte) []Token {
 				}
 				tmp_num, _ := strconv.ParseFloat(number_token, 64)
 				number_formatted = strconv.FormatFloat(tmp_num, 'g', -1, 64)
-				if math.Mod(tmp_num, 1) == 0 {
-					number_formatted = strconv.FormatFloat(tmp_num, 'g', -1, 64) + ".0"
-				}
-
 			} else {
-				number_formatted = number_token + ".0"
+				number_formatted = number_token
 			}
 			tokens = append(tokens, Token{
 				tokenType: "NUMBER",
