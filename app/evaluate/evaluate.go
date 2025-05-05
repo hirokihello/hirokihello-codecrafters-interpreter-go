@@ -58,12 +58,12 @@ func (n *NilNode) getValue() string {
 
 // binary については一旦考えない
 func (b *Binary) getValue() string {
-	left, _ := strconv.Atoi(b.left.getValue())
-	right, _ := strconv.Atoi(b.right.getValue())
+	left, _ := strconv.ParseFloat(b.left.getValue(), 10)
+	right, _ := strconv.ParseFloat(b.right.getValue(), 10)
 	if b.operator.tokenType == "SLASH" {
-		return strconv.Itoa(left / right)
+		return strconv.FormatFloat(left / right, 'f', -1, 64)
 	} else if b.operator.tokenType == "STAR"{
-		return strconv.Itoa(left * right)
+		return strconv.FormatFloat(left * right, 'f', -1, 64)
 	}
 
 	panic("Unknown operator: " + b.operator.tokenType)
