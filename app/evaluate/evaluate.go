@@ -21,7 +21,8 @@ func (a *AST) GetValue() {
 
 func (u *Unary) getValue() string {
 	if u.operator.tokenType == "MINUS" {
-		return "-" + u.right.getValue()
+		num, _ := strconv.Atoi(u.right.getValue())
+		return strconv.FormatFloat(float64(num*-1), 'f', -1, 64)
 	} else if u.operator.tokenType == "BANG" {
 		if u.right.getValue() == "false" || u.right.getValue() == "" || u.right.getValue() == "nil" {
 			return "true"
@@ -61,9 +62,13 @@ func (b *Binary) getValue() string {
 	left, _ := strconv.ParseFloat(b.left.getValue(), 10)
 	right, _ := strconv.ParseFloat(b.right.getValue(), 10)
 	if b.operator.tokenType == "SLASH" {
-		return strconv.FormatFloat(left / right, 'f', -1, 64)
-	} else if b.operator.tokenType == "STAR"{
-		return strconv.FormatFloat(left * right, 'f', -1, 64)
+		return strconv.FormatFloat(left/right, 'f', -1, 64)
+	} else if b.operator.tokenType == "STAR" {
+		return strconv.FormatFloat(left*right, 'f', -1, 64)
+	} else if b.operator.tokenType == "MINUS" {
+		return strconv.FormatFloat(left-right, 'f', -1, 64)
+	} else if b.operator.tokenType == "PLUS" {
+		return strconv.FormatFloat(left+right, 'f', -1, 64)
 	}
 
 	panic("Unknown operator: " + b.operator.tokenType)
