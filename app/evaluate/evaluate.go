@@ -1,6 +1,7 @@
 package evaluate
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"strconv"
@@ -21,6 +22,10 @@ func (a *AST) GetValue() {
 
 func (u *Unary) getValue() EvaluateNode {
 	if u.operator.tokenType == MINUS {
+		if u.right.getValue().valueType != NUMBER {
+			fmt.Fprintf(os.Stderr, "Operand must be a number.")
+			os.Exit(70)
+		}
 		num, _ := strconv.Atoi(u.right.getValue().value)
 		return EvaluateNode{
 			value:     strconv.FormatFloat(float64(num*-1), 'f', -1, 64),
