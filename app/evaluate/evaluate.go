@@ -96,6 +96,10 @@ func (n *NilNode) getValue() EvaluateNode {
 
 func (b *Binary) getValue() EvaluateNode {
 	if b.operator.tokenType == PLUS {
+		if b.left.getValue().valueType != b.right.getValue().valueType {
+			fmt.Fprintf(os.Stderr, "Operands must be same types.")
+			os.Exit(70)
+		}
 		if b.left.getValue().valueType == STRING {
 			return EvaluateNode{
 				value:     b.left.getValue().value + b.right.getValue().value,
