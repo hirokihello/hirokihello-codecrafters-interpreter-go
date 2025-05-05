@@ -19,11 +19,8 @@ func (a *AST) Print() {
 }
 
 func (u *Unary) Print() {
-	io.WriteString(os.Stdout, "(")
 	io.WriteString(os.Stdout, u.operator.value)
-	io.WriteString(os.Stdout, " ")
 	u.right.Print()
-	io.WriteString(os.Stdout, ")")
 }
 
 func (g *Group) Print() {
