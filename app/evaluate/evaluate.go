@@ -145,6 +145,10 @@ func (b *Binary) getValue() EvaluateNode {
 			valueType: NUMBER,
 		}
 	} else if b.operator.tokenType == GREATER {
+		if b.left.getValue().valueType != NUMBER || b.right.getValue().valueType != NUMBER {
+			fmt.Fprintf(os.Stderr, "Operands must be same types.")
+			os.Exit(70)
+		}
 		if left > right {
 			return EvaluateNode{
 				value:     "true",
@@ -157,6 +161,10 @@ func (b *Binary) getValue() EvaluateNode {
 			}
 		}
 	} else if b.operator.tokenType == GREATER_EQUAL {
+		if b.left.getValue().valueType != NUMBER || b.right.getValue().valueType != NUMBER {
+			fmt.Fprintf(os.Stderr, "Operands must be same types.")
+			os.Exit(70)
+		}
 		if left >= right {
 			return EvaluateNode{
 				value:     "true",
@@ -169,6 +177,10 @@ func (b *Binary) getValue() EvaluateNode {
 			}
 		}
 	} else if b.operator.tokenType == LESS {
+		if b.left.getValue().valueType != NUMBER || b.right.getValue().valueType != NUMBER {
+			fmt.Fprintf(os.Stderr, "Operands must be same types.")
+			os.Exit(70)
+		}
 		if left < right {
 			return EvaluateNode{
 				value:     "true",
@@ -181,6 +193,10 @@ func (b *Binary) getValue() EvaluateNode {
 			}
 		}
 	} else if b.operator.tokenType == LESS_EQUAL {
+		if b.left.getValue().valueType != NUMBER || b.right.getValue().valueType != NUMBER {
+			fmt.Fprintf(os.Stderr, "Operands must be same types.")
+			os.Exit(70)
+		}
 		if left <= right {
 			return EvaluateNode{
 				value:     "true",
