@@ -460,6 +460,11 @@ func (g *Group) getValue() EvaluateNode {
 func (i *IdentifierNode) getValue() EvaluateNode {
 	variables := getGlobalEnv()
 
+	if _, ok := variables.variables[i.value]; !ok {
+		fmt.Fprintf(os.Stderr, "Undefined variable '%s'.\n", i.value)
+		os.Exit(70)
+	}
+
 	return EvaluateNode{
 		value:     variables.variables[i.value].value,
 		valueType: variables.variables[i.value].valueType,
