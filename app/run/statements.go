@@ -13,11 +13,6 @@ type PrintStatement struct {
 	expr Node
 }
 
-type ExpressionStatement struct {
-	Statement
-	expr Node
-}
-
 func (p *PrintStatement) Execute() error {
 	value := p.expr.getValue().value
 	fmt.Println(value)
@@ -25,7 +20,26 @@ func (p *PrintStatement) Execute() error {
 	return nil
 }
 
+type ExpressionStatement struct {
+	Statement
+	expr Node
+}
+
 func (e *ExpressionStatement) Execute() error {
 	e.expr.getValue()
+	return nil
+}
+
+type VariableStatement struct {
+	Statement
+	expr    Node
+	varName string
+}
+
+func (v *VariableStatement) Execute() error {
+	globalEnv := getGlobalEnv()
+	value := v.expr.getValue()
+	// 変数の値をセットする
+	globalEnv.variables[v.varName] = value
 	return nil
 }

@@ -1,1 +1,2 @@
-56 + "quz";
+var a = "foo";
+print a;

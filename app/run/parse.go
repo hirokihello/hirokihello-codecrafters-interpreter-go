@@ -34,6 +34,8 @@ const (
 	BOOLEAN       = "BOOLEAN"
 	PRINT         = "PRINT"
 	EOF           = "EOF"
+	VAR           = "VAR"
+	IDENTIFIER    = "IDENTIFIER"
 )
 
 var reservedTokens = map[string]string{
@@ -57,6 +59,7 @@ var reservedTokens = map[string]string{
 	"/":     SLASH,
 	"!":     BANG,
 	"print": PRINT,
+	"var":   VAR,
 }
 
 type Token struct {
@@ -122,6 +125,12 @@ type Binary struct {
 	tokenType string
 }
 
+type IdentifierNode struct {
+	Node
+	value     string
+	tokenType string
+}
+
 // parse して構文木を作成する
 func (p *Parser) parseStatements() []Statement {
 	statements := make([]Statement, 0)
@@ -152,10 +161,32 @@ func (p *Parser) parseStatement() Statement {
 		}
 
 		panic("; is missing")
+	} else if p.tokens[p.index].tokenType == VAR && (p.index+3 < len(p.tokens)) {
+		p.index++
+		varName := p.tokens[p.index].value
+		p.index++
+		if p.tokens[p.index].value != "=" {
+			panic("= is missing")
+		}
+		p.index++
+		varValue, err := p.parseExpression()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(65)
+		}
+		if p.tokens[p.index].value != ";" {
+			panic("; is missing")
+		}
+		p.index++
+
+		return &VariableStatement{
+			expr:    varValue,
+			varName: varName,
+		}
 	}
 
+	// ただの式。特に何かをしているわけではない。
 	expression, err := p.parseExpression()
-
 	if p.tokens[p.index].value == ";" {
 		p.index++
 		if err != nil {
@@ -365,6 +396,15 @@ func (p *Parser) parsePrimary() (Node, error) {
 		}
 		return expression, fmt.Errorf("missing right parenthesis")
 	}
+
+	if token.tokenType == IDENTIFIER {
+		p.index++
+		return &IdentifierNode{
+			value:     token.value,
+			tokenType: token.tokenType,
+		}, nil
+	}
+
 	return &NilNode{}, fmt.Errorf("unknown expression")
 }
 
@@ -414,6 +454,15 @@ func (g *Group) getValue() EvaluateNode {
 			value:     values,
 			valueType: STRING,
 		}
+	}
+}
+
+func (i *IdentifierNode) getValue() EvaluateNode {
+	variables := getGlobalEnv()
+
+	return EvaluateNode{
+		value:     variables.variables[i.value].value,
+		valueType: variables.variables[i.value].valueType,
 	}
 }
 
