@@ -26,7 +26,6 @@ var reservedWords = map[string]string{
 	"while":  "WHILE",
 }
 
-
 // tokenize は、ファイルの内容をトークンに変換します。
 // これは、トークンのリストを返します。
 func tokenize(fileContents []byte) []Token {
@@ -49,18 +48,20 @@ func tokenize(fileContents []byte) []Token {
 				tokens = append(tokens, Token{tokenType: reservedTokens[string(x)], value: string(x)})
 			}
 		} else if x == '"' {
-			string_token := ""
+			string_token := make([]byte, 0)
 
 			for i+1 < len(fileContents) && fileContents[i+1] != '"' {
 				i++
-				string_token += string(fileContents[i])
+				string_token = append(string_token, fileContents[i])
 			}
+
+			string_res := string(string_token)
 
 			if i+1 < len(fileContents) && fileContents[i+1] == '"' {
 				tokens = append(tokens,
 					Token{
 						tokenType: "STRING",
-						value:     string_token,
+						value:     string_res,
 					})
 				i++
 			} else if i+1 == len(fileContents) {

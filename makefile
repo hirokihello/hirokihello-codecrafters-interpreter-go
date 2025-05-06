@@ -4,9 +4,11 @@ test_evaluate:
 test_parse:
 		go run ./app/main.go parse ./testfile
 
-
 test_run:
 		go run ./app/main.go run ./testfile
+
+test_tokenize:
+		go run ./app/main.go tokenize ./testfile
 
 test:
 	codecrafters test

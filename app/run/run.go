@@ -18,9 +18,9 @@ func Run() {
 		index:  0,
 	}
 
-	stetements := parser.parseStatements()
+	statements := parser.parseStatements()
 
-	for _, statement := range stetements {
+	for _, statement := range statements {
 		statement.Execute()
 	}
 }
