@@ -15,7 +15,7 @@ type PrintStatement struct {
 
 func (p *PrintStatement) Execute() error {
 	value := p.expr.getValue().value
-	fmt.Print(value)
+	fmt.Println(value)
 
 	return nil
 }
