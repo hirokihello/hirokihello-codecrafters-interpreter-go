@@ -144,7 +144,7 @@ func (p *Parser) parseStatement() Statement {
 			p.index++
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err)
-				os.Exit(65);
+				os.Exit(65)
 			}
 			return &PrintStatement{
 				expr: expr,
@@ -154,8 +154,21 @@ func (p *Parser) parseStatement() Statement {
 		panic("; is missing")
 	}
 
-	fmt.Printf("%+v", p.tokens[p.index])
-	panic("not implemented: ")
+	expression, err := p.parseExpression()
+
+	if p.tokens[p.index].value == ";" {
+		p.index++
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(65)
+		}
+		return &ExpressionStatement{
+			expr: expression,
+		}
+	}
+
+	panic("; is missing")
+
 }
 
 func (p *Parser) parseExpression() (Node, error) {
@@ -353,6 +366,34 @@ func (p *Parser) parsePrimary() (Node, error) {
 		return expression, fmt.Errorf("missing right parenthesis")
 	}
 	return &NilNode{}, fmt.Errorf("unknown expression")
+}
+
+func (u *Unary) getValue() EvaluateNode {
+	if u.operator.tokenType == MINUS {
+		if u.right.getValue().valueType != NUMBER {
+			fmt.Fprintf(os.Stderr, "Operand must be a number.")
+			os.Exit(70)
+		}
+		num, _ := strconv.Atoi(u.right.getValue().value)
+		return EvaluateNode{
+			value:     strconv.FormatFloat(float64(num*-1), 'f', -1, 64),
+			valueType: NUMBER,
+		}
+	} else if u.operator.tokenType == BANG {
+		if u.right.getValue().value == "false" || u.right.getValue().value == "" || u.right.getValue().value == "nil" {
+			return EvaluateNode{
+				value:     "true",
+				valueType: BOOLEAN,
+			}
+		} else {
+			return EvaluateNode{
+				value:     "false",
+				valueType: BOOLEAN,
+			}
+		}
+	}
+
+	panic("Unknown operator: " + u.operator.tokenType)
 }
 
 func (g *Group) getValue() EvaluateNode {

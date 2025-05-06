@@ -13,9 +13,19 @@ type PrintStatement struct {
 	expr Node
 }
 
+type ExpressionStatement struct {
+	Statement
+	expr Node
+}
+
 func (p *PrintStatement) Execute() error {
 	value := p.expr.getValue().value
 	fmt.Println(value)
 
+	return nil
+}
+
+func (e *ExpressionStatement) Execute() error {
+	e.expr.getValue()
 	return nil
 }
