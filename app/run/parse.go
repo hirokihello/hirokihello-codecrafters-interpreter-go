@@ -161,10 +161,18 @@ func (p *Parser) parseStatement() Statement {
 		}
 
 		panic("; is missing")
-	} else if p.tokens[p.index].tokenType == VAR && (p.index+3 < len(p.tokens)) {
+	} else if p.tokens[p.index].tokenType == VAR {
 		p.index++
 		varName := p.tokens[p.index].value
 		p.index++
+		if p.tokens[p.index].tokenType == SEMICOLON {
+			p.index++
+
+			return &VariableStatement{
+				expr:    &NilNode{ value: "nil" , tokenType: NIL },
+				varName: varName,
+			}
+		}
 		if p.tokens[p.index].value != "=" {
 			panic("= is missing")
 		}
