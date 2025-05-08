@@ -36,6 +36,8 @@ const (
 	EOF           = "EOF"
 	VAR           = "VAR"
 	IDENTIFIER    = "IDENTIFIER"
+	// ASSIGNMENT は代入文のためのトークン
+	ASSIGNMENT = "ASSIGNMENT"
 )
 
 var reservedTokens = map[string]string{
@@ -78,6 +80,13 @@ type Node interface {
 
 type EvaluateNode struct {
 	value     string
+	valueType string
+}
+
+type AssignmentNode struct {
+	Node
+	varName   string
+	value     Node
 	valueType string
 }
 
@@ -146,9 +155,13 @@ func (p *Parser) parseStatements() []Statement {
 }
 
 func (p *Parser) parseStatement() Statement {
-	if (p.tokens[p.index].tokenType == PRINT) && (p.index+2 < len(p.tokens)) {
+	if p.tokens[p.index].tokenType == PRINT {
 		p.index++
-		expr, err := p.parseExpression()
+		if p.tokens[p.index].value == ";" {
+			fmt.Fprintln(os.Stderr, "Missing expression after print")
+			os.Exit(65)
+		}
+		expr, err := p.parseAssignment()
 		if p.tokens[p.index].value == ";" {
 			p.index++
 			if err != nil {
@@ -169,7 +182,7 @@ func (p *Parser) parseStatement() Statement {
 			p.index++
 
 			return &VariableStatement{
-				expr:    &NilNode{ value: "nil" , tokenType: NIL },
+				expr:    &NilNode{value: "nil", tokenType: NIL},
 				varName: varName,
 			}
 		}
@@ -177,13 +190,13 @@ func (p *Parser) parseStatement() Statement {
 			panic("= is missing")
 		}
 		p.index++
-		varValue, err := p.parseExpression()
+		varValue, err := p.parseAssignment()
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(65)
 		}
 		if p.tokens[p.index].value != ";" {
-			panic("; is missing")
+			panic("; is missing " + p.tokens[p.index].value)
 		}
 		p.index++
 
@@ -194,7 +207,7 @@ func (p *Parser) parseStatement() Statement {
 	}
 
 	// ただの式。特に何かをしているわけではない。
-	expression, err := p.parseExpression()
+	expression, err := p.parseAssignment()
 	if p.tokens[p.index].value == ";" {
 		p.index++
 		if err != nil {
@@ -206,8 +219,39 @@ func (p *Parser) parseStatement() Statement {
 		}
 	}
 
-	panic("; is missing")
+	panic("unknown statement")
+}
 
+func (p *Parser) parseAssignment() (Node, error) {
+	if p.index >= len(p.tokens) {
+		panic("Index out of range")
+	}
+	token := p.tokens[p.index]
+	if token.tokenType == IDENTIFIER {
+		if p.tokens[p.index + 1].value == ";" {
+			p.index++
+			return &IdentifierNode{
+				value:     token.value,
+				tokenType: token.tokenType,
+			}, nil
+		}
+		if p.tokens[p.index + 1].value == "=" {
+			p.index++
+			p.index++
+			value, err := p.parseAssignment()
+			if err != nil {
+				return nil, err
+			}
+			return &AssignmentNode{
+				varName:   token.value,
+				value:     value,
+				valueType: ASSIGNMENT,
+			}, nil
+		}
+	}
+
+	// Identifier でない場合は expression をそのまま返す
+	return p.parseExpression()
 }
 
 func (p *Parser) parseExpression() (Node, error) {
@@ -413,6 +457,7 @@ func (p *Parser) parsePrimary() (Node, error) {
 		}, nil
 	}
 
+	fmt.Printf("Unknown token: %s\n", token.tokenType)
 	return &NilNode{}, fmt.Errorf("unknown expression")
 }
 
@@ -462,6 +507,25 @@ func (g *Group) getValue() EvaluateNode {
 			value:     values,
 			valueType: STRING,
 		}
+	}
+}
+
+func (a *AssignmentNode) getValue() EvaluateNode {
+	variables := getGlobalEnv()
+	if _, ok := variables.variables[a.varName]; !ok {
+		fmt.Fprintf(os.Stderr, "Undefined variable '%s'.\n", a.varName)
+		os.Exit(70)
+	}
+	// 変数の値をセットする
+	value := a.value.getValue().value
+	valueType := a.value.getValue().valueType
+	variables.variables[a.varName] = EvaluateNode{
+		value:     value,
+		valueType: valueType,
+	}
+	return EvaluateNode{
+		value:     value,
+		valueType: valueType,
 	}
 }
 
@@ -645,4 +709,11 @@ func (b *Binary) getValue() EvaluateNode {
 	}
 
 	panic("Unknown operator: " + b.operator.tokenType)
+}
+
+func (e *EvaluateNode) getValue() EvaluateNode {
+	return EvaluateNode{
+		value:     e.getValue().value,
+		valueType: e.getValue().valueType,
+	}
 }
