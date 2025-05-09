@@ -155,7 +155,28 @@ func (p *Parser) parseStatements() []Statement {
 }
 
 func (p *Parser) parseStatement() Statement {
-	if p.tokens[p.index].tokenType == PRINT {
+	if p.index >= len(p.tokens) {
+		panic("Index out of range")
+	} else if p.tokens[p.index].tokenType == LEFT_BRACE {
+		p.index++
+		statements := make([]Statement, 0)
+		for p.index < len(p.tokens) && p.tokens[p.index].tokenType != RIGHT_BRACE && p.tokens[p.index].tokenType != EOF{
+			statement := p.parseStatement()
+			if statement == nil {
+				fmt.Fprintf(os.Stderr, "Error parsing statement at index %d\n", p.index)
+				panic("error while parsing")
+			}
+			statements = append(statements, statement)
+		}
+		if p.index >= len(p.tokens) || p.tokens[p.index].tokenType != RIGHT_BRACE {
+			fmt.Fprintln(os.Stderr, "Missing right brace")
+			os.Exit(65)
+		}
+		p.index++
+		return &BlockStatement{
+			statements: statements,
+		}
+	} else if p.tokens[p.index].tokenType == PRINT {
 		p.index++
 		if p.tokens[p.index].value == ";" {
 			fmt.Fprintln(os.Stderr, "Missing expression after print")
@@ -228,14 +249,14 @@ func (p *Parser) parseAssignment() (Node, error) {
 	}
 	token := p.tokens[p.index]
 	if token.tokenType == IDENTIFIER {
-		if p.tokens[p.index + 1].value == ";" {
+		if p.tokens[p.index+1].value == ";" {
 			p.index++
 			return &IdentifierNode{
 				value:     token.value,
 				tokenType: token.tokenType,
 			}, nil
 		}
-		if p.tokens[p.index + 1].value == "=" {
+		if p.tokens[p.index+1].value == "=" {
 			p.index++
 			p.index++
 			value, err := p.parseAssignment()

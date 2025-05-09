@@ -13,6 +13,20 @@ type PrintStatement struct {
 	expr Node
 }
 
+type BlockStatement struct {
+	Statement
+	statements []Statement
+}
+
+func (b *BlockStatement) Execute() error {
+	for _, statement := range b.statements {
+		if err := statement.Execute(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (p *PrintStatement) Execute() error {
 	value := p.expr.getValue().value
 	fmt.Println(value)
