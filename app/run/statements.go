@@ -5,7 +5,7 @@ import (
 )
 
 type Statement interface {
-	Execute() error
+	Execute(env *Env) error
 }
 
 type PrintStatement struct {
@@ -18,17 +18,18 @@ type BlockStatement struct {
 	statements []Statement
 }
 
-func (b *BlockStatement) Execute() error {
+func (b *BlockStatement) Execute(env *Env) error {
+	newEnv := env.NewChildEnv()
 	for _, statement := range b.statements {
-		if err := statement.Execute(); err != nil {
+		if err := statement.Execute(newEnv); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (p *PrintStatement) Execute() error {
-	value := p.expr.getValue().value
+func (p *PrintStatement) Execute(env *Env) error {
+	value := p.expr.getValue(env).value
 	fmt.Println(value)
 
 	return nil
@@ -39,8 +40,8 @@ type ExpressionStatement struct {
 	expr Node
 }
 
-func (e *ExpressionStatement) Execute() error {
-	e.expr.getValue()
+func (e *ExpressionStatement) Execute(env *Env) error {
+	e.expr.getValue(env)
 	return nil
 }
 
@@ -50,10 +51,9 @@ type VariableStatement struct {
 	varName string
 }
 
-func (v *VariableStatement) Execute() error {
-	globalEnv := getGlobalEnv()
-	value := v.expr.getValue()
+func (v *VariableStatement) Execute(env *Env) error {
+	value := v.expr.getValue(env)
 	// 変数の値をセットする
-	globalEnv.variables[v.varName] = value
+	env.variables[v.varName] = value
 	return nil
 }

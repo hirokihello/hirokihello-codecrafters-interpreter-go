@@ -21,6 +21,6 @@ func Run() {
 	statements := parser.parseStatements()
 
 	for _, statement := range statements {
-		statement.Execute()
+		statement.Execute(getGlobalEnv())
 	}
 }

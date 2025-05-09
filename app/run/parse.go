@@ -74,7 +74,7 @@ type Parser struct {
 }
 
 type Node interface {
-	getValue() EvaluateNode
+	getValue(env *Env) EvaluateNode
 	getType() string
 }
 
@@ -160,7 +160,7 @@ func (p *Parser) parseStatement() Statement {
 	} else if p.tokens[p.index].tokenType == LEFT_BRACE {
 		p.index++
 		statements := make([]Statement, 0)
-		for p.index < len(p.tokens) && p.tokens[p.index].tokenType != RIGHT_BRACE && p.tokens[p.index].tokenType != EOF{
+		for p.index < len(p.tokens) && p.tokens[p.index].tokenType != RIGHT_BRACE && p.tokens[p.index].tokenType != EOF {
 			statement := p.parseStatement()
 			if statement == nil {
 				fmt.Fprintf(os.Stderr, "Error parsing statement at index %d\n", p.index)
@@ -482,19 +482,19 @@ func (p *Parser) parsePrimary() (Node, error) {
 	return &NilNode{}, fmt.Errorf("unknown expression")
 }
 
-func (u *Unary) getValue() EvaluateNode {
+func (u *Unary) getValue(env *Env) EvaluateNode {
 	if u.operator.tokenType == MINUS {
-		if u.right.getValue().valueType != NUMBER {
+		if u.right.getValue(env).valueType != NUMBER {
 			fmt.Fprintf(os.Stderr, "Operand must be a number.")
 			os.Exit(70)
 		}
-		num, _ := strconv.Atoi(u.right.getValue().value)
+		num, _ := strconv.Atoi(u.right.getValue(env).value)
 		return EvaluateNode{
 			value:     strconv.FormatFloat(float64(num*-1), 'f', -1, 64),
 			valueType: NUMBER,
 		}
 	} else if u.operator.tokenType == BANG {
-		if u.right.getValue().value == "false" || u.right.getValue().value == "" || u.right.getValue().value == "nil" {
+		if u.right.getValue(env).value == "false" || u.right.getValue(env).value == "" || u.right.getValue(env).value == "nil" {
 			return EvaluateNode{
 				value:     "true",
 				valueType: BOOLEAN,
@@ -510,11 +510,11 @@ func (u *Unary) getValue() EvaluateNode {
 	panic("Unknown operator: " + u.operator.tokenType)
 }
 
-func (g *Group) getValue() EvaluateNode {
+func (g *Group) getValue(env *Env) EvaluateNode {
 	if len(g.nodes) == 1 {
 		return EvaluateNode{
-			value:     g.nodes[0].getValue().value,
-			valueType: g.nodes[0].getValue().valueType,
+			value:     g.nodes[0].getValue(env).value,
+			valueType: g.nodes[0].getValue(env).valueType,
 		}
 	} else {
 		values := ""
@@ -522,7 +522,7 @@ func (g *Group) getValue() EvaluateNode {
 			if i != 0 {
 				values += " "
 			}
-			values += n.getValue().value
+			values += n.getValue(env).value
 		}
 		return EvaluateNode{
 			value:     values,
@@ -531,15 +531,15 @@ func (g *Group) getValue() EvaluateNode {
 	}
 }
 
-func (a *AssignmentNode) getValue() EvaluateNode {
+func (a *AssignmentNode) getValue(env *Env) EvaluateNode {
 	variables := getGlobalEnv()
 	if _, ok := variables.variables[a.varName]; !ok {
 		fmt.Fprintf(os.Stderr, "Undefined variable '%s'.\n", a.varName)
 		os.Exit(70)
 	}
 	// 変数の値をセットする
-	value := a.value.getValue().value
-	valueType := a.value.getValue().valueType
+	value := a.value.getValue(env).value
+	valueType := a.value.getValue(env).valueType
 	variables.variables[a.varName] = EvaluateNode{
 		value:     value,
 		valueType: valueType,
@@ -550,59 +550,59 @@ func (a *AssignmentNode) getValue() EvaluateNode {
 	}
 }
 
-func (i *IdentifierNode) getValue() EvaluateNode {
-	variables := getGlobalEnv()
+func (i *IdentifierNode) getValue(env *Env) EvaluateNode {
+	variables := env.variables
 
-	if _, ok := variables.variables[i.value]; !ok {
+	if _, ok := variables[i.value]; !ok {
 		fmt.Fprintf(os.Stderr, "Undefined variable '%s'.\n", i.value)
 		os.Exit(70)
 	}
 
 	return EvaluateNode{
-		value:     variables.variables[i.value].value,
-		valueType: variables.variables[i.value].valueType,
+		value:     variables[i.value].value,
+		valueType: variables[i.value].valueType,
 	}
 }
 
-func (s *StringNode) getValue() EvaluateNode {
+func (s *StringNode) getValue(env *Env) EvaluateNode {
 	return EvaluateNode{
 		value:     s.value,
 		valueType: STRING,
 	}
 }
-func (n *NumberNode) getValue() EvaluateNode {
+func (n *NumberNode) getValue(env *Env) EvaluateNode {
 	return EvaluateNode{
 		value:     n.value,
 		valueType: NUMBER,
 	}
 }
-func (b *BooleanNode) getValue() EvaluateNode {
+func (b *BooleanNode) getValue(env *Env) EvaluateNode {
 	return EvaluateNode{
 		value:     b.value,
 		valueType: BOOLEAN,
 	}
 }
-func (n *NilNode) getValue() EvaluateNode {
+func (n *NilNode) getValue(env *Env) EvaluateNode {
 	return EvaluateNode{
 		value:     n.value,
 		valueType: NIL,
 	}
 }
 
-func (b *Binary) getValue() EvaluateNode {
+func (b *Binary) getValue(env *Env) EvaluateNode {
 	if b.operator.tokenType == PLUS {
-		if b.left.getValue().valueType != b.right.getValue().valueType {
+		if b.left.getValue(env).valueType != b.right.getValue(env).valueType {
 			fmt.Fprintf(os.Stderr, "Operands must be same types.")
 			os.Exit(70)
 		}
-		if b.left.getValue().valueType == STRING {
+		if b.left.getValue(env).valueType == STRING {
 			return EvaluateNode{
-				value:     b.left.getValue().value + b.right.getValue().value,
+				value:     b.left.getValue(env).value + b.right.getValue(env).value,
 				valueType: STRING,
 			}
-		} else if b.left.getValue().valueType == NUMBER {
-			left, _ := strconv.ParseFloat(b.left.getValue().value, 10)
-			right, _ := strconv.ParseFloat(b.right.getValue().value, 10)
+		} else if b.left.getValue(env).valueType == NUMBER {
+			left, _ := strconv.ParseFloat(b.left.getValue(env).value, 10)
+			right, _ := strconv.ParseFloat(b.right.getValue(env).value, 10)
 			return EvaluateNode{
 				value:     strconv.FormatFloat(left+right, 'f', -1, 64),
 				valueType: NUMBER,
@@ -610,10 +610,10 @@ func (b *Binary) getValue() EvaluateNode {
 		}
 	}
 
-	left, _ := strconv.ParseFloat(b.left.getValue().value, 10)
-	right, _ := strconv.ParseFloat(b.right.getValue().value, 10)
+	left, _ := strconv.ParseFloat(b.left.getValue(env).value, 10)
+	right, _ := strconv.ParseFloat(b.right.getValue(env).value, 10)
 	if b.operator.tokenType == SLASH {
-		if b.left.getValue().valueType != NUMBER || b.right.getValue().valueType != NUMBER {
+		if b.left.getValue(env).valueType != NUMBER || b.right.getValue(env).valueType != NUMBER {
 			fmt.Fprintf(os.Stderr, "Operands must be numbers.")
 			os.Exit(70)
 		}
@@ -622,7 +622,7 @@ func (b *Binary) getValue() EvaluateNode {
 			valueType: NUMBER,
 		}
 	} else if b.operator.tokenType == STAR {
-		if b.left.getValue().valueType != NUMBER || b.right.getValue().valueType != NUMBER {
+		if b.left.getValue(env).valueType != NUMBER || b.right.getValue(env).valueType != NUMBER {
 			fmt.Fprintf(os.Stderr, "Operands must be numbers.")
 			os.Exit(70)
 		}
@@ -631,7 +631,7 @@ func (b *Binary) getValue() EvaluateNode {
 			valueType: NUMBER,
 		}
 	} else if b.operator.tokenType == MINUS {
-		if b.left.getValue().valueType != NUMBER || b.right.getValue().valueType != NUMBER {
+		if b.left.getValue(env).valueType != NUMBER || b.right.getValue(env).valueType != NUMBER {
 			fmt.Fprintf(os.Stderr, "Operands must be numbers.")
 			os.Exit(70)
 		}
@@ -640,7 +640,7 @@ func (b *Binary) getValue() EvaluateNode {
 			valueType: NUMBER,
 		}
 	} else if b.operator.tokenType == GREATER {
-		if b.left.getValue().valueType != NUMBER || b.right.getValue().valueType != NUMBER {
+		if b.left.getValue(env).valueType != NUMBER || b.right.getValue(env).valueType != NUMBER {
 			fmt.Fprintf(os.Stderr, "Operands must be same types.")
 			os.Exit(70)
 		}
@@ -656,7 +656,7 @@ func (b *Binary) getValue() EvaluateNode {
 			}
 		}
 	} else if b.operator.tokenType == GREATER_EQUAL {
-		if b.left.getValue().valueType != NUMBER || b.right.getValue().valueType != NUMBER {
+		if b.left.getValue(env).valueType != NUMBER || b.right.getValue(env).valueType != NUMBER {
 			fmt.Fprintf(os.Stderr, "Operands must be same types.")
 			os.Exit(70)
 		}
@@ -672,7 +672,7 @@ func (b *Binary) getValue() EvaluateNode {
 			}
 		}
 	} else if b.operator.tokenType == LESS {
-		if b.left.getValue().valueType != NUMBER || b.right.getValue().valueType != NUMBER {
+		if b.left.getValue(env).valueType != NUMBER || b.right.getValue(env).valueType != NUMBER {
 			fmt.Fprintf(os.Stderr, "Operands must be same types.")
 			os.Exit(70)
 		}
@@ -688,7 +688,7 @@ func (b *Binary) getValue() EvaluateNode {
 			}
 		}
 	} else if b.operator.tokenType == LESS_EQUAL {
-		if b.left.getValue().valueType != NUMBER || b.right.getValue().valueType != NUMBER {
+		if b.left.getValue(env).valueType != NUMBER || b.right.getValue(env).valueType != NUMBER {
 			fmt.Fprintf(os.Stderr, "Operands must be same types.")
 			os.Exit(70)
 		}
@@ -704,7 +704,7 @@ func (b *Binary) getValue() EvaluateNode {
 			}
 		}
 	} else if b.operator.tokenType == EQUAL_EQUAL {
-		if b.left.getValue().value == b.right.getValue().value && b.left.getValue().valueType == b.right.getValue().valueType {
+		if b.left.getValue(env).value == b.right.getValue(env).value && b.left.getValue(env).valueType == b.right.getValue(env).valueType {
 			return EvaluateNode{
 				value:     "true",
 				valueType: BOOLEAN,
@@ -716,7 +716,7 @@ func (b *Binary) getValue() EvaluateNode {
 			}
 		}
 	} else if b.operator.tokenType == BANG_EQUAL {
-		if b.left.getValue().value != b.right.getValue().value || b.left.getValue().valueType != b.right.getValue().valueType {
+		if b.left.getValue(env).value != b.right.getValue(env).value || b.left.getValue(env).valueType != b.right.getValue(env).valueType {
 			return EvaluateNode{
 				value:     "true",
 				valueType: BOOLEAN,
@@ -732,9 +732,9 @@ func (b *Binary) getValue() EvaluateNode {
 	panic("Unknown operator: " + b.operator.tokenType)
 }
 
-func (e *EvaluateNode) getValue() EvaluateNode {
+func (e *EvaluateNode) getValue(env *Env) EvaluateNode {
 	return EvaluateNode{
-		value:     e.getValue().value,
-		valueType: e.getValue().valueType,
+		value:     e.getValue(env).value,
+		valueType: e.getValue(env).valueType,
 	}
 }

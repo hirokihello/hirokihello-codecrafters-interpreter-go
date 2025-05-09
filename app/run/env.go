@@ -18,3 +18,15 @@ func getGlobalEnv() *Env {
 	}
 	return globalEnv
 }
+
+// NewChildEnv creates a new child environment that inherits from the current environment.
+func (e *Env) NewChildEnv() *Env {
+	newEnv := &Env{
+		variables: make(map[string]EvaluateNode),
+	}
+
+	for k, v := range e.variables {
+		newEnv.variables[k] = v
+	}
+	return newEnv
+}
