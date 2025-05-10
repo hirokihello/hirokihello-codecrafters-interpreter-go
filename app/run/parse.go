@@ -36,8 +36,9 @@ const (
 	EOF           = "EOF"
 	VAR           = "VAR"
 	IDENTIFIER    = "IDENTIFIER"
-	// ASSIGNMENT は代入文のためのトークン
-	ASSIGNMENT = "ASSIGNMENT"
+	ASSIGNMENT    = "ASSIGNMENT"
+	IF            = "IF"
+	ELSE          = "ELSE"
 )
 
 var reservedTokens = map[string]string{
@@ -62,6 +63,8 @@ var reservedTokens = map[string]string{
 	"!":     BANG,
 	"print": PRINT,
 	"var":   VAR,
+	"if":    IF,
+	"else":  ELSE,
 }
 
 type Token struct {
@@ -157,6 +160,49 @@ func (p *Parser) parseStatements() []Statement {
 func (p *Parser) parseStatement() Statement {
 	if p.index >= len(p.tokens) {
 		panic("Index out of range")
+	} else if p.tokens[p.index].tokenType == IF {
+		p.index++
+		if p.tokens[p.index].tokenType != LEFT_PAREN {
+			fmt.Fprintln(os.Stderr, "Missing left parenthesis")
+			os.Exit(65)
+		}
+		p.index++
+		expr, err := p.parseAssignment()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(65)
+		}
+		if p.tokens[p.index].tokenType != RIGHT_PAREN {
+			fmt.Fprintln(os.Stderr, "Missing right parenthesis")
+			os.Exit(65)
+		}
+		p.index++
+		isBlock := false
+		if p.tokens[p.index].tokenType == LEFT_BRACE {
+			p.index++
+			isBlock = true
+		}
+
+		statements := make([]Statement, 0)
+		for p.index < len(p.tokens) && p.tokens[p.index].tokenType != RIGHT_BRACE && p.tokens[p.index].tokenType != EOF {
+			statement := p.parseStatement()
+			if statement == nil {
+				fmt.Fprintf(os.Stderr, "Error parsing statement at index %d\n", p.index)
+				panic("error while parsing")
+			}
+			statements = append(statements, statement)
+		}
+		if isBlock {
+			if p.index >= len(p.tokens) || p.tokens[p.index].tokenType != RIGHT_BRACE {
+				fmt.Fprintln(os.Stderr, "Missing right brace")
+				os.Exit(65)
+			}
+			p.index++
+		}
+		return &IfStatement{
+			expr:       expr,
+			statements: statements,
+		}
 	} else if p.tokens[p.index].tokenType == LEFT_BRACE {
 		p.index++
 		statements := make([]Statement, 0)
@@ -256,7 +302,7 @@ func (p *Parser) parseAssignment() (Node, error) {
 				tokenType: token.tokenType,
 			}, nil
 		}
-		if p.tokens[p.index+1].value == "=" {
+		if p.tokens[p.index+1].tokenType == EQUAL {
 			p.index++
 			p.index++
 			value, err := p.parseAssignment()

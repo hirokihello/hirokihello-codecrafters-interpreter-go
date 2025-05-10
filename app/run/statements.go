@@ -62,9 +62,30 @@ type VariableStatement struct {
 	varName string
 }
 
+//if xxx { } の時に生成されるやつ
+type IfStatement struct {
+	Statement
+	expr    Node
+	statements []Statement
+}
+
 func (v *VariableStatement) Execute(env *Env) error {
 	value := v.expr.getValue(env)
 	// 変数の値をセットする
 	env.variables[v.varName] = value
+	return nil
+}
+
+func (i *IfStatement) Execute(env *Env) error {
+	value := i.expr.getValue(env)
+	if value.value == "true" {
+		newEnv := env.NewChildEnv()
+		for _, statement := range i.statements {
+			if err := statement.Execute(newEnv); err != nil {
+				return err
+			}
+		}
+		setParentEnv(env, newEnv)
+	}
 	return nil
 }
