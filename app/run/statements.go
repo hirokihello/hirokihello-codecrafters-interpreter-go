@@ -68,6 +68,7 @@ type IfStatement struct {
 	expr    Node
 	statements []Statement
 	elseStatements []Statement
+	elseIfStatements []IfStatement
 }
 
 func (v *VariableStatement) Execute(env *Env) error {
@@ -84,7 +85,17 @@ func (i *IfStatement) Execute(env *Env) error {
 
 	if value.value == "true" {
 		statements = i.statements
-	} else if value.value == "false" {
+	} else if len(i.elseIfStatements) > 0 {
+		for _, elseIf := range i.elseIfStatements {
+			// 何も条件に引っ掛からなかった場合は else を実行する
+			statements = i.elseStatements
+
+			if elseIf.expr.getValue(env).value == "true" {
+				statements = elseIf.statements
+				break
+			}
+		}
+	}	else {
 		statements = i.elseStatements
 	}
 

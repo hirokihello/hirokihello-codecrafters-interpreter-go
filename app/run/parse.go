@@ -204,42 +204,115 @@ func (p *Parser) parseStatement() Statement {
 		}
 
 		elseStatements := make([]Statement, 0)
-		if p.index < len(p.tokens) && p.tokens[p.index].tokenType == ELSE {
+		elseIfStatements := make([]IfStatement, 0)
+		for p.index < len(p.tokens) && p.tokens[p.index].tokenType == ELSE {
 			p.index++
 			elseBlock := false
-			if p.tokens[p.index].tokenType == LEFT_BRACE {
-				p.index++
-				elseBlock = true
-				for p.index < len(p.tokens) && p.tokens[p.index].tokenType != RIGHT_BRACE && p.tokens[p.index].tokenType != EOF {
-					statement := p.parseStatement()
-					if statement == nil {
-						fmt.Fprintf(os.Stderr, "Error parsing statement at index %d\n", p.index)
-						panic("error while parsing")
-					}
-					elseStatements = append(elseStatements, statement)
-				}
-			} else {
-				if p.index < len(p.tokens) && p.tokens[p.index].tokenType != SEMICOLON && p.tokens[p.index].tokenType != EOF {
-					statement := p.parseStatement()
-					if statement == nil {
-						fmt.Fprintf(os.Stderr, "Error parsing statement at index %d\n", p.index)
-						panic("error while parsing")
-					}
-					elseStatements = append(elseStatements, statement)
-				}
+			if p.index >= len(p.tokens) {
+				fmt.Fprintln(os.Stderr, "Missing else block")
+				os.Exit(65)
 			}
-			if elseBlock {
-				if p.index >= len(p.tokens) || p.tokens[p.index].tokenType != RIGHT_BRACE {
-					fmt.Fprintln(os.Stderr, "Missing right brace")
+			if p.tokens[p.index].tokenType == IF {
+				// else if の場合
+				p.index++
+
+				if p.tokens[p.index].tokenType != LEFT_PAREN {
+					fmt.Fprintln(os.Stderr, "Missing left parenthesis")
 					os.Exit(65)
 				}
 				p.index++
+				elseIfExpr, err := p.parseAssignment()
+				if err != nil {
+					fmt.Fprintln(os.Stderr, err)
+					os.Exit(65)
+				}
+				if p.tokens[p.index].tokenType != RIGHT_PAREN {
+					fmt.Fprintln(os.Stderr, "Missing right parenthesis")
+					os.Exit(65)
+				}
+				p.index++
+				isBlock := false
+				if p.tokens[p.index].tokenType == LEFT_BRACE {
+					p.index++
+					isBlock = true
+				}
+				tmpStatements := make([]Statement, 0)
+				if isBlock {
+					for p.index < len(p.tokens) &&
+						p.tokens[p.index].tokenType != RIGHT_BRACE &&
+						p.tokens[p.index].tokenType != EOF &&
+						p.tokens[p.index].tokenType != ELSE {
+						statement := p.parseStatement()
+						if statement == nil {
+							fmt.Fprintf(os.Stderr, "Error parsing statement at index %d\n", p.index)
+							panic("error while parsing")
+						}
+						tmpStatements = append(statements, statement)
+					}
+				} else {
+					if p.index < len(p.tokens) &&
+						p.tokens[p.index].tokenType != RIGHT_BRACE &&
+						p.tokens[p.index].tokenType != EOF &&
+						p.tokens[p.index].tokenType != ELSE {
+						statement := p.parseStatement()
+						if statement == nil {
+							fmt.Fprintf(os.Stderr, "Error parsing statement at index %d\n", p.index)
+							panic("error while parsing")
+						}
+						tmpStatements = append(statements, statement)
+					}
+				}
+				if isBlock {
+					if p.index >= len(p.tokens) || p.tokens[p.index].tokenType != RIGHT_BRACE {
+						fmt.Fprintln(os.Stderr, "Missing right brace")
+						os.Exit(65)
+					}
+					p.index++
+				}
+				elseIfStatements = append(elseIfStatements, IfStatement{
+					expr:           elseIfExpr,
+					statements:     tmpStatements,
+				})
+			} else {
+				//ただの else の場合
+				if p.tokens[p.index].tokenType == LEFT_BRACE {
+					p.index++
+					elseBlock = true
+					for p.index < len(p.tokens) &&
+						p.tokens[p.index].tokenType != RIGHT_BRACE &&
+						p.tokens[p.index].tokenType != EOF &&
+						p.tokens[p.index].tokenType != ELSE {
+						statement := p.parseStatement()
+						if statement == nil {
+							fmt.Fprintf(os.Stderr, "Error parsing statement at index %d\n", p.index)
+							panic("error while parsing")
+						}
+						elseStatements = append(elseStatements, statement)
+					}
+				} else {
+					if p.index < len(p.tokens) && p.tokens[p.index].tokenType != SEMICOLON && p.tokens[p.index].tokenType != EOF {
+						statement := p.parseStatement()
+						if statement == nil {
+							fmt.Fprintf(os.Stderr, "Error parsing statement at index %d\n", p.index)
+							panic("error while parsing")
+						}
+						elseStatements = append(elseStatements, statement)
+					}
+				}
+				if elseBlock {
+					if p.index >= len(p.tokens) || p.tokens[p.index].tokenType != RIGHT_BRACE {
+						fmt.Fprintln(os.Stderr, "Missing right brace")
+						os.Exit(65)
+					}
+					p.index++
+				}
 			}
 		}
 		return &IfStatement{
 			expr:           expr,
 			statements:     statements,
 			elseStatements: elseStatements,
+			elseIfStatements: elseIfStatements,
 		}
 	} else if p.tokens[p.index].tokenType == LEFT_BRACE {
 		p.index++

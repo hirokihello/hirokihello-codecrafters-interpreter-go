@@ -1,7 +1,6 @@
 if (true) {
-  print "if block";
-} else print "else statement";
-
-if (true) print "if statement"; else {
-  print "else block";
+  print "bar";
+} else if (true) print "bar";
+if (true) print "foo"; else if (true) {
+  print "foo";
 }
