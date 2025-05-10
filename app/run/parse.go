@@ -1,6 +1,8 @@
 package run
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
@@ -157,6 +159,21 @@ func (p *Parser) parseStatements() []Statement {
 	return statements
 }
 
+func prettyPrint(v any) {
+	data, err := json.Marshal(v)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	var buf bytes.Buffer
+	err = json.Indent(&buf, data, "", "  ")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(buf.String())
+}
+
 func (p *Parser) parseStatement() Statement {
 	if p.index >= len(p.tokens) {
 		panic("Index out of range")
@@ -188,6 +205,7 @@ func (p *Parser) parseStatement() Statement {
 			p.tokens[p.index].tokenType != RIGHT_BRACE &&
 			p.tokens[p.index].tokenType != EOF &&
 			p.tokens[p.index].tokenType != ELSE {
+
 			statement := p.parseStatement()
 			if statement == nil {
 				fmt.Fprintf(os.Stderr, "Error parsing statement at index %d\n", p.index)
@@ -247,8 +265,13 @@ func (p *Parser) parseStatement() Statement {
 							fmt.Fprintf(os.Stderr, "Error parsing statement at index %d\n", p.index)
 							panic("error while parsing")
 						}
-						tmpStatements = append(statements, statement)
+						tmpStatements = append(tmpStatements, statement)
 					}
+					if p.index >= len(p.tokens) || p.tokens[p.index].tokenType != RIGHT_BRACE {
+						fmt.Fprintln(os.Stderr, "Missing right brace")
+						os.Exit(65)
+					}
+					p.index++
 				} else {
 					if p.index < len(p.tokens) &&
 						p.tokens[p.index].tokenType != RIGHT_BRACE &&
@@ -259,19 +282,12 @@ func (p *Parser) parseStatement() Statement {
 							fmt.Fprintf(os.Stderr, "Error parsing statement at index %d\n", p.index)
 							panic("error while parsing")
 						}
-						tmpStatements = append(statements, statement)
+						tmpStatements = append(tmpStatements, statement)
 					}
-				}
-				if isBlock {
-					if p.index >= len(p.tokens) || p.tokens[p.index].tokenType != RIGHT_BRACE {
-						fmt.Fprintln(os.Stderr, "Missing right brace")
-						os.Exit(65)
-					}
-					p.index++
 				}
 				elseIfStatements = append(elseIfStatements, IfStatement{
-					expr:           elseIfExpr,
-					statements:     tmpStatements,
+					expr:       elseIfExpr,
+					statements: tmpStatements,
 				})
 			} else {
 				//ただの else の場合
@@ -308,10 +324,11 @@ func (p *Parser) parseStatement() Statement {
 				}
 			}
 		}
+
 		return &IfStatement{
-			expr:           expr,
-			statements:     statements,
-			elseStatements: elseStatements,
+			expr:             expr,
+			statements:       statements,
+			elseStatements:   elseStatements,
 			elseIfStatements: elseIfStatements,
 		}
 	} else if p.tokens[p.index].tokenType == LEFT_BRACE {
@@ -689,7 +706,7 @@ func (g *Group) getValue(env *Env) EvaluateNode {
 }
 
 func (a *AssignmentNode) getValue(env *Env) EvaluateNode {
-	variables := env.variables
+	variables := (*env.variables)
 	if _, ok := variables[a.varName]; !ok {
 		fmt.Fprintf(os.Stderr, "Undefined variable '%s'.\n", a.varName)
 		os.Exit(70)
@@ -703,8 +720,8 @@ func (a *AssignmentNode) getValue(env *Env) EvaluateNode {
 	}
 	variables[a.varName] = newValue
 
-	if _, ok := env.parentVariables[a.varName]; ok {
-		env.parentVariables[a.varName] = newValue
+	if _, ok := (*env.parentVariables)[a.varName]; ok {
+		(*env.parentVariables)[a.varName] = newValue
 	}
 
 	// 変数の値を返す
@@ -715,7 +732,7 @@ func (a *AssignmentNode) getValue(env *Env) EvaluateNode {
 }
 
 func (i *IdentifierNode) getValue(env *Env) EvaluateNode {
-	variables := env.variables
+	variables := *env.variables
 
 	if _, ok := variables[i.value]; !ok {
 		fmt.Fprintf(os.Stderr, "Undefined variable '%s'.\n", i.value)

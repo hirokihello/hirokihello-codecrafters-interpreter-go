@@ -18,15 +18,6 @@ type BlockStatement struct {
 	statements []Statement
 }
 
-func setParentEnv(parentEnv *Env, childEnv *Env) {
-	// 親の環境をセットする
-	for k, v := range childEnv.parentVariables {
-		if _, ok := parentEnv.variables[k]; ok {
-			parentEnv.variables[k] = v
-		}
-	}
-}
-
 func (b *BlockStatement) Execute(env *Env) error {
 	newEnv := env.NewChildEnv()
 	for _, statement := range b.statements {
@@ -62,49 +53,59 @@ type VariableStatement struct {
 	varName string
 }
 
-//if xxx { } の時に生成されるやつ
+// if xxx { } の時に生成されるやつ
 type IfStatement struct {
 	Statement
-	expr    Node
-	statements []Statement
-	elseStatements []Statement
+	expr             Node
+	statements       []Statement
+	elseStatements   []Statement
 	elseIfStatements []IfStatement
 }
 
 func (v *VariableStatement) Execute(env *Env) error {
 	value := v.expr.getValue(env)
 	// 変数の値をセットする
-	env.variables[v.varName] = value
+	(*env.variables)[v.varName] = value
 	return nil
 }
 
-func (i *IfStatement) Execute(env *Env) error {
-	value := i.expr.getValue(env)
-	newEnv := env.NewChildEnv()
+func (i *IfStatement) Execute(parentEnv *Env) error {
+	value := i.expr.getValue(parentEnv)
+	newEnv := parentEnv.NewChildEnv()
 	statements := []Statement{}
-
 	if value.value == "true" {
 		statements = i.statements
 	} else if len(i.elseIfStatements) > 0 {
-		for _, elseIf := range i.elseIfStatements {
+		for _, elseIfStatement := range i.elseIfStatements {
 			// 何も条件に引っ掛からなかった場合は else を実行する
 			statements = i.elseStatements
 
-			if elseIf.expr.getValue(env).value == "true" {
-				statements = elseIf.statements
+			if elseIfStatement.expr.getValue(parentEnv).value == "true" {
+				statements = elseIfStatement.statements
 				break
 			}
 		}
-	}	else {
+	} else {
 		statements = i.elseStatements
 	}
 
 	for _, statement := range statements {
 		if err := statement.Execute(newEnv); err != nil {
-			setParentEnv(env, newEnv)
+			setParentEnv(parentEnv, newEnv)
 			panic(err)
 		}
+		setParentEnv(parentEnv, newEnv)
 	}
-	setParentEnv(env, newEnv)
 	return nil
+}
+
+func setParentEnv(parentEnv *Env, childEnv *Env) {
+	for k, v := range *childEnv.parentVariables {
+		if _, ok := (*parentEnv.variables)[k]; ok {
+			if (*parentEnv.variables)[k] != v {
+				(*parentEnv.variables)[k] = v
+				(*parentEnv.parentVariables)[k] = v
+			}
+		}
+	}
 }
