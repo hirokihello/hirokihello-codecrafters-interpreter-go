@@ -1,7 +1,7 @@
 {
   var hello = "outer hello";
   {
-    var hello = "inner hello";
+    hello = "inner hello";
     print hello;
   }
   print hello;

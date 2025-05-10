@@ -532,15 +532,15 @@ func (g *Group) getValue(env *Env) EvaluateNode {
 }
 
 func (a *AssignmentNode) getValue(env *Env) EvaluateNode {
-	variables := getGlobalEnv()
-	if _, ok := variables.variables[a.varName]; !ok {
+	variables := env.variables
+	if _, ok := variables[a.varName]; !ok {
 		fmt.Fprintf(os.Stderr, "Undefined variable '%s'.\n", a.varName)
 		os.Exit(70)
 	}
 	// 変数の値をセットする
 	value := a.value.getValue(env).value
 	valueType := a.value.getValue(env).valueType
-	variables.variables[a.varName] = EvaluateNode{
+	variables[a.varName] = EvaluateNode{
 		value:     value,
 		valueType: valueType,
 	}

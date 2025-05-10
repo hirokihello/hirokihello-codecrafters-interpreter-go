@@ -21,9 +21,7 @@ func getGlobalEnv() *Env {
 
 // NewChildEnv creates a new child environment that inherits from the current environment.
 func (e *Env) NewChildEnv() *Env {
-	newEnv := &Env{
-		variables: make(map[string]EvaluateNode),
-	}
+	newEnv := NewEnv()
 
 	for k, v := range e.variables {
 		newEnv.variables[k] = v
