@@ -67,6 +67,7 @@ type IfStatement struct {
 	Statement
 	expr    Node
 	statements []Statement
+	elseStatements []Statement
 }
 
 func (v *VariableStatement) Execute(env *Env) error {
@@ -81,6 +82,14 @@ func (i *IfStatement) Execute(env *Env) error {
 	if value.value == "true" {
 		newEnv := env.NewChildEnv()
 		for _, statement := range i.statements {
+			if err := statement.Execute(newEnv); err != nil {
+				return err
+			}
+		}
+		setParentEnv(env, newEnv)
+	} else {
+		newEnv := env.NewChildEnv()
+		for _, statement := range i.elseStatements {
 			if err := statement.Execute(newEnv); err != nil {
 				return err
 			}
