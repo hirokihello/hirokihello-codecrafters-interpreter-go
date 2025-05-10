@@ -1,9 +1,19 @@
+var baz = "global baz";
+var hello = "global hello";
+var foo = "global foo";
 {
+  var baz = "outer baz";
   var hello = "outer hello";
   {
-    hello = "inner hello";
+    var baz = "inner baz";
+    print baz;
     print hello;
+    print foo;
   }
+  print baz;
   print hello;
+  print foo;
 }
+print baz;
 print hello;
+print foo;

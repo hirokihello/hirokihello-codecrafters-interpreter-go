@@ -540,10 +540,17 @@ func (a *AssignmentNode) getValue(env *Env) EvaluateNode {
 	// 変数の値をセットする
 	value := a.value.getValue(env).value
 	valueType := a.value.getValue(env).valueType
-	variables[a.varName] = EvaluateNode{
+	newValue := EvaluateNode{
 		value:     value,
 		valueType: valueType,
 	}
+	variables[a.varName] = newValue
+
+	if _, ok := env.parentVariables[a.varName]; ok {
+		env.parentVariables[a.varName] = newValue
+	}
+
+	// 変数の値を返す
 	return EvaluateNode{
 		value:     value,
 		valueType: valueType,

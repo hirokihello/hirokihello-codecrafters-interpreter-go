@@ -1,12 +1,14 @@
 package run
 
 type Env struct {
-	variables map[string]EvaluateNode
+	variables       map[string]EvaluateNode
+	parentVariables map[string]EvaluateNode
 }
 
 func NewEnv() *Env {
 	return &Env{
-		variables: make(map[string]EvaluateNode),
+		variables:       make(map[string]EvaluateNode),
+		parentVariables: make(map[string]EvaluateNode),
 	}
 }
 
@@ -23,8 +25,10 @@ func getGlobalEnv() *Env {
 func (e *Env) NewChildEnv() *Env {
 	newEnv := NewEnv()
 
+	// コピー
 	for k, v := range e.variables {
 		newEnv.variables[k] = v
+		newEnv.parentVariables[k] = v
 	}
 	return newEnv
 }

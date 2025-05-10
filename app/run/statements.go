@@ -18,6 +18,15 @@ type BlockStatement struct {
 	statements []Statement
 }
 
+func setParentEnv(parentEnv *Env, childEnv *Env) {
+	// 親の環境をセットする
+	for k, v := range childEnv.parentVariables {
+		if _, ok := parentEnv.variables[k]; ok {
+			parentEnv.variables[k] = v
+		}
+	}
+}
+
 func (b *BlockStatement) Execute(env *Env) error {
 	newEnv := env.NewChildEnv()
 	for _, statement := range b.statements {
@@ -25,6 +34,7 @@ func (b *BlockStatement) Execute(env *Env) error {
 			return err
 		}
 	}
+	setParentEnv(env, newEnv)
 	return nil
 }
 
@@ -45,6 +55,7 @@ func (e *ExpressionStatement) Execute(env *Env) error {
 	return nil
 }
 
+// var xxx = yyy; の時に生成されるやつ
 type VariableStatement struct {
 	Statement
 	expr    Node
