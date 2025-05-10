@@ -79,22 +79,21 @@ func (v *VariableStatement) Execute(env *Env) error {
 
 func (i *IfStatement) Execute(env *Env) error {
 	value := i.expr.getValue(env)
+	newEnv := env.NewChildEnv()
+	statements := []Statement{}
+
 	if value.value == "true" {
-		newEnv := env.NewChildEnv()
-		for _, statement := range i.statements {
-			if err := statement.Execute(newEnv); err != nil {
-				return err
-			}
-		}
-		setParentEnv(env, newEnv)
-	} else {
-		newEnv := env.NewChildEnv()
-		for _, statement := range i.elseStatements {
-			if err := statement.Execute(newEnv); err != nil {
-				return err
-			}
-		}
-		setParentEnv(env, newEnv)
+		statements = i.statements
+	} else if value.value == "false" {
+		statements = i.elseStatements
 	}
+
+	for _, statement := range statements {
+		if err := statement.Execute(newEnv); err != nil {
+			setParentEnv(env, newEnv)
+			panic(err)
+		}
+	}
+	setParentEnv(env, newEnv)
 	return nil
 }

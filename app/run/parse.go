@@ -210,14 +210,23 @@ func (p *Parser) parseStatement() Statement {
 			if p.tokens[p.index].tokenType == LEFT_BRACE {
 				p.index++
 				elseBlock = true
-			}
-			for p.index < len(p.tokens) && p.tokens[p.index].tokenType != RIGHT_BRACE && p.tokens[p.index].tokenType != EOF {
-				statement := p.parseStatement()
-				if statement == nil {
-					fmt.Fprintf(os.Stderr, "Error parsing statement at index %d\n", p.index)
-					panic("error while parsing")
+				for p.index < len(p.tokens) && p.tokens[p.index].tokenType != RIGHT_BRACE && p.tokens[p.index].tokenType != EOF {
+					statement := p.parseStatement()
+					if statement == nil {
+						fmt.Fprintf(os.Stderr, "Error parsing statement at index %d\n", p.index)
+						panic("error while parsing")
+					}
+					elseStatements = append(elseStatements, statement)
 				}
-				elseStatements = append(elseStatements, statement)
+			} else {
+				if p.index < len(p.tokens) && p.tokens[p.index].tokenType != SEMICOLON && p.tokens[p.index].tokenType != EOF {
+					statement := p.parseStatement()
+					if statement == nil {
+						fmt.Fprintf(os.Stderr, "Error parsing statement at index %d\n", p.index)
+						panic("error while parsing")
+					}
+					elseStatements = append(elseStatements, statement)
+				}
 			}
 			if elseBlock {
 				if p.index >= len(p.tokens) || p.tokens[p.index].tokenType != RIGHT_BRACE {
@@ -228,8 +237,8 @@ func (p *Parser) parseStatement() Statement {
 			}
 		}
 		return &IfStatement{
-			expr:       expr,
-			statements: statements,
+			expr:           expr,
+			statements:     statements,
 			elseStatements: elseStatements,
 		}
 	} else if p.tokens[p.index].tokenType == LEFT_BRACE {
