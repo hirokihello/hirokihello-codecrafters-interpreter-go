@@ -992,9 +992,10 @@ func isTrueString(value string) bool {
 	if value == "false" {
 		return false
 	}
-	if value == "" {
-		return false
-	}
+	// から文字は true とみなす
+	// if value == "" {
+	// 	return false
+	// }
 	if value == "nil" {
 		return false
 	}
