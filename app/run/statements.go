@@ -73,14 +73,14 @@ func (i *IfStatement) Execute(parentEnv *Env) error {
 	value := i.expr.getValue(parentEnv)
 	newEnv := parentEnv.NewChildEnv()
 	statements := []Statement{}
-	if value.value == "true" {
+	if isTrueString(value.value) {
 		statements = i.statements
 	} else if len(i.elseIfStatements) > 0 {
 		for _, elseIfStatement := range i.elseIfStatements {
 			// 何も条件に引っ掛からなかった場合は else を実行する
 			statements = i.elseStatements
 
-			if elseIfStatement.expr.getValue(parentEnv).value == "true" {
+			if isTrueString(elseIfStatement.expr.getValue(parentEnv).value) {
 				statements = elseIfStatement.statements
 				break
 			}

@@ -1,8 +1,6 @@
 package run
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
@@ -41,6 +39,8 @@ const (
 	ASSIGNMENT    = "ASSIGNMENT"
 	IF            = "IF"
 	ELSE          = "ELSE"
+	OR            = "OR"
+	AND           = "AND"
 )
 
 var reservedTokens = map[string]string{
@@ -67,6 +67,8 @@ var reservedTokens = map[string]string{
 	"var":   VAR,
 	"if":    IF,
 	"else":  ELSE,
+	"or":    OR,
+	"and":   AND,
 }
 
 type Token struct {
@@ -159,21 +161,6 @@ func (p *Parser) parseStatements() []Statement {
 	return statements
 }
 
-func prettyPrint(v any) {
-	data, err := json.Marshal(v)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	var buf bytes.Buffer
-	err = json.Indent(&buf, data, "", "  ")
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	fmt.Println(buf.String())
-}
-
 func (p *Parser) parseStatement() Statement {
 	if p.index >= len(p.tokens) {
 		panic("Index out of range")
@@ -201,24 +188,31 @@ func (p *Parser) parseStatement() Statement {
 		}
 
 		statements := make([]Statement, 0)
-		for p.index < len(p.tokens) &&
-			p.tokens[p.index].tokenType != RIGHT_BRACE &&
-			p.tokens[p.index].tokenType != EOF &&
-			p.tokens[p.index].tokenType != ELSE {
+		if isBlock {
+			for p.index < len(p.tokens) &&
+				p.tokens[p.index].tokenType != RIGHT_BRACE &&
+				p.tokens[p.index].tokenType != EOF &&
+				p.tokens[p.index].tokenType != ELSE {
 
+				statement := p.parseStatement()
+				if statement == nil {
+					fmt.Fprintf(os.Stderr, "Error parsing statement at index %d\n", p.index)
+					panic("error while parsing")
+				}
+				statements = append(statements, statement)
+			}
+			if p.index >= len(p.tokens) || p.tokens[p.index].tokenType != RIGHT_BRACE {
+				fmt.Fprintln(os.Stderr, "Missing right brace")
+				os.Exit(65)
+			}
+			p.index++
+		} else {
 			statement := p.parseStatement()
 			if statement == nil {
 				fmt.Fprintf(os.Stderr, "Error parsing statement at index %d\n", p.index)
 				panic("error while parsing")
 			}
 			statements = append(statements, statement)
-		}
-		if isBlock {
-			if p.index >= len(p.tokens) || p.tokens[p.index].tokenType != RIGHT_BRACE {
-				fmt.Fprintln(os.Stderr, "Missing right brace")
-				os.Exit(65)
-			}
-			p.index++
 		}
 
 		elseStatements := make([]Statement, 0)
@@ -414,6 +408,7 @@ func (p *Parser) parseStatement() Statement {
 		}
 	}
 
+	fmt.Printf("Unknown token: %s\n", p.tokens[p.index].tokenType)
 	panic("unknown statement")
 }
 
@@ -422,6 +417,7 @@ func (p *Parser) parseAssignment() (Node, error) {
 		panic("Index out of range")
 	}
 	token := p.tokens[p.index]
+
 	if token.tokenType == IDENTIFIER {
 		if p.tokens[p.index+1].value == ";" {
 			p.index++
@@ -445,8 +441,48 @@ func (p *Parser) parseAssignment() (Node, error) {
 		}
 	}
 
+	node, err := p.parseExpression()
 	// Identifier でない場合は expression をそのまま返す
-	return p.parseExpression()
+
+	if p.tokens[p.index].tokenType == OR {
+		for p.index < len(p.tokens) && p.tokens[p.index].tokenType == OR {
+			or_token := p.tokens[p.index]
+			p.index++
+			rightNode, err := p.parseExpression()
+			if err != nil {
+				return nil, err
+			}
+			if rightNode == nil {
+				fmt.Fprintln(os.Stderr, "Error parsing right node")
+				os.Exit(65)
+			}
+			node = &Binary{
+				left:      node,
+				operator:  or_token,
+				right:     rightNode,
+				tokenType: OR,
+			}
+		}
+		return node, nil
+	} else if p.tokens[p.index].tokenType == AND {
+		for p.index < len(p.tokens) && p.tokens[p.index].tokenType == AND {
+			and_token := p.tokens[p.index]
+			p.index++
+			rightNode, err := p.parseExpression()
+			if err != nil {
+				return nil, err
+			}
+			node = &Binary{
+				left:      node,
+				operator:  and_token,
+				right:     rightNode,
+				tokenType: AND,
+			}
+		}
+		return node, nil
+	}
+
+	return node, err
 }
 
 func (p *Parser) parseExpression() (Node, error) {
@@ -633,7 +669,7 @@ func (p *Parser) parsePrimary() (Node, error) {
 	if token.tokenType == LEFT_PAREN {
 		var expression Node
 		p.index++
-		expression, _ = p.parseExpression()
+		expression, _ = p.parseAssignment()
 		if p.tokens[p.index].tokenType == "RIGHT_PAREN" {
 			p.index++
 			return &Group{
@@ -910,6 +946,35 @@ func (b *Binary) getValue(env *Env) EvaluateNode {
 		}
 	}
 
+	if b.operator.tokenType == OR {
+		leftValue := b.left.getValue(env)
+		if isTrueString(leftValue.value) {
+			return leftValue
+		}
+
+		rightValue := b.right.getValue(env)
+		if isTrueString(rightValue.value) {
+			return rightValue
+		}
+
+		return EvaluateNode{
+			value:     "false",
+			valueType: BOOLEAN,
+		}
+	} else if b.operator.tokenType == AND {
+		if isTrueString(b.left.getValue(env).value) && isTrueString(b.right.getValue(env).value) {
+			return EvaluateNode{
+				value:     b.right.getValue(env).value,
+				valueType: b.right.getValue(env).valueType,
+			}
+		} else {
+			return EvaluateNode{
+				value:     "false",
+				valueType: BOOLEAN,
+			}
+		}
+	}
+
 	panic("Unknown operator: " + b.operator.tokenType)
 }
 
@@ -918,4 +983,20 @@ func (e *EvaluateNode) getValue(env *Env) EvaluateNode {
 		value:     e.getValue(env).value,
 		valueType: e.getValue(env).valueType,
 	}
+}
+
+func isTrueString(value string) bool {
+	if value == "true" {
+		return true
+	}
+	if value == "false" {
+		return false
+	}
+	if value == "" {
+		return false
+	}
+	if value == "nil" {
+		return false
+	}
+	return true
 }
