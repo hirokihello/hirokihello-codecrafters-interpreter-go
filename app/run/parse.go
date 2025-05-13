@@ -42,6 +42,7 @@ const (
 	OR            = "OR"
 	AND           = "AND"
 	WHILE         = "WHILE"
+	FOR           = "FOR"
 )
 
 var reservedTokens = map[string]string{
@@ -71,6 +72,7 @@ var reservedTokens = map[string]string{
 	"or":    OR,
 	"and":   AND,
 	"while": WHILE,
+	"for":   FOR,
 }
 
 type Token struct {
@@ -148,8 +150,6 @@ type IdentifierNode struct {
 	value     string
 	tokenType string
 }
-
-
 
 // parse して構文木を作成する
 func (p *Parser) parseStatements() []Statement {
@@ -451,11 +451,98 @@ func (p *Parser) parseStatement() Statement {
 			expr:       expr,
 			statements: statements,
 		}
+	} else if p.tokens[p.index].tokenType == FOR {
+		p.index++;
+		if p.tokens[p.index].tokenType != LEFT_PAREN {
+			fmt.Fprintln(os.Stderr, "Missing left parenthesis")
+			os.Exit(65)
+		}
+
+		p.index++
+
+		var firstStatement Statement
+		// セミコロンでなければ、最初の文をパースする
+		if p.tokens[p.index].tokenType != SEMICOLON {
+			firstStatement = p.parseStatement()
+		} else {
+			// セミコロンの場合は、nil を代入する
+			p.index++
+			firstStatement = &ExpressionStatement{
+				expr: &NilNode{value: "nil", tokenType: NIL},
+			}
+		}
+		expression, err := p.parseAssignment()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(65)
+		}
+		p.index++
+		var endStatement Statement
+		if p.tokens[p.index].tokenType != RIGHT_PAREN {
+			expr, err := p.parseAssignment()
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				os.Exit(65)
+			}
+			endStatement = &ExpressionStatement{expr: expr}
+			if p.tokens[p.index].tokenType == SEMICOLON {
+				p.index++
+			}
+			p.index++
+		} else {
+			// セミコロンの場合は、nil を代入する
+			p.index++
+			endStatement = &ExpressionStatement{
+				expr: &NilNode{value: "nil", tokenType: NIL},
+			}
+		}
+
+		isBlock := false
+
+		if p.tokens[p.index].tokenType == LEFT_BRACE {
+			p.index++
+			isBlock = true
+		}
+		fmt.Printf("p.index: %d\n", p.index)
+		statements := make([]Statement, 0)
+		if isBlock {
+			for p.index < len(p.tokens) &&
+				p.tokens[p.index].tokenType != RIGHT_BRACE &&
+				p.tokens[p.index].tokenType != EOF {
+
+				statement := p.parseStatement()
+				if statement == nil {
+					fmt.Fprintf(os.Stderr, "Error parsing statement at index %d\n", p.index)
+					panic("error while parsing")
+				}
+				statements = append(statements, statement)
+			}
+			if p.index >= len(p.tokens) || p.tokens[p.index].tokenType != RIGHT_BRACE {
+				fmt.Fprintln(os.Stderr, "Missing right brace")
+				os.Exit(65)
+			}
+			p.index++
+		} else {
+			statement := p.parseStatement()
+			if statement == nil {
+				fmt.Fprintf(os.Stderr, "Error parsing statement at index %d\n", p.index)
+				panic("error while parsing")
+			}
+			statements = append(statements, statement)
+			p.index++;
+		}
+
+		return &ForStatement{
+			firstStatement:  firstStatement,
+			expression:      expression,
+			endStatement:    endStatement,
+			statements:      statements,
+		}
 	}
 
 	// ただの式。特に何かをしているわけではない。
 	expression, err := p.parseAssignment()
-	if p.tokens[p.index].value == ";" {
+	if p.tokens[p.index].value == SEMICOLON {
 		p.index++
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
@@ -477,7 +564,7 @@ func (p *Parser) parseAssignment() (Node, error) {
 	token := p.tokens[p.index]
 
 	if token.tokenType == IDENTIFIER {
-		if p.tokens[p.index+1].value == ";" {
+		if p.tokens[p.index+1].value == SEMICOLON {
 			p.index++
 			return &IdentifierNode{
 				value:     token.value,

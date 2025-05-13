@@ -67,6 +67,41 @@ type WhileStatement struct {
 	statements []Statement
 }
 
+type ForStatement struct {
+	Statement
+	firstStatement  Statement
+	expression      Node
+	endStatement Statement
+	// for の中の文
+	statements []Statement
+}
+
+func (f *ForStatement) Execute(parentEnv *Env) error {
+
+	newEnv := parentEnv.NewChildEnv()
+
+	if err := f.firstStatement.Execute(newEnv); err != nil {
+		setParentEnv(parentEnv, newEnv)
+		return err
+	}
+
+	for isTrueString(f.expression.getValue(newEnv).value) {
+		for _, statement := range f.statements {
+			if err := statement.Execute(newEnv); err != nil {
+				setParentEnv(parentEnv, newEnv)
+				return err
+			}
+		}
+
+		if err := f.endStatement.Execute(newEnv); err != nil {
+			setParentEnv(parentEnv, newEnv)
+			return err
+		}
+	}
+	setParentEnv(parentEnv, newEnv)
+	return nil
+}
+
 func (v *VariableStatement) Execute(env *Env) error {
 	value := v.expr.getValue(env)
 	// 変数の値をセットする
@@ -115,7 +150,7 @@ func setParentEnv(parentEnv *Env, childEnv *Env) {
 	}
 }
 
-func (w *WhileStatement) Execute (parentEnv *Env) error {
+func (w *WhileStatement) Execute(parentEnv *Env) error {
 	value := w.expr.getValue(parentEnv)
 	newEnv := parentEnv.NewChildEnv()
 	for isTrueString(value.value) {
