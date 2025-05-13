@@ -61,6 +61,11 @@ type IfStatement struct {
 	elseStatements   []Statement
 	elseIfStatements []IfStatement
 }
+type WhileStatement struct {
+	Statement
+	expr       Node
+	statements []Statement
+}
 
 func (v *VariableStatement) Execute(env *Env) error {
 	value := v.expr.getValue(env)
@@ -108,4 +113,21 @@ func setParentEnv(parentEnv *Env, childEnv *Env) {
 			}
 		}
 	}
+}
+
+func (w *WhileStatement) Execute (parentEnv *Env) error {
+	value := w.expr.getValue(parentEnv)
+	newEnv := parentEnv.NewChildEnv()
+	for isTrueString(value.value) {
+		for _, statement := range w.statements {
+			if err := statement.Execute(newEnv); err != nil {
+				setParentEnv(parentEnv, newEnv)
+				panic(err)
+			}
+			setParentEnv(parentEnv, newEnv)
+		}
+		value = w.expr.getValue(parentEnv)
+	}
+	setParentEnv(parentEnv, newEnv)
+	return nil
 }

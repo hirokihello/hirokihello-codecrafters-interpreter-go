@@ -41,6 +41,7 @@ const (
 	ELSE          = "ELSE"
 	OR            = "OR"
 	AND           = "AND"
+	WHILE         = "WHILE"
 )
 
 var reservedTokens = map[string]string{
@@ -69,6 +70,7 @@ var reservedTokens = map[string]string{
 	"else":  ELSE,
 	"or":    OR,
 	"and":   AND,
+	"while": WHILE,
 }
 
 type Token struct {
@@ -146,6 +148,8 @@ type IdentifierNode struct {
 	value     string
 	tokenType string
 }
+
+
 
 // parse して構文木を作成する
 func (p *Parser) parseStatements() []Statement {
@@ -392,6 +396,60 @@ func (p *Parser) parseStatement() Statement {
 		return &VariableStatement{
 			expr:    varValue,
 			varName: varName,
+		}
+	} else if p.tokens[p.index].tokenType == WHILE {
+		p.index++
+		if p.tokens[p.index].tokenType != LEFT_PAREN {
+			fmt.Fprintln(os.Stderr, "Missing left parenthesis")
+			os.Exit(65)
+		}
+		p.index++
+		expr, err := p.parseAssignment()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(65)
+		}
+		if p.tokens[p.index].tokenType != RIGHT_PAREN {
+			fmt.Fprintln(os.Stderr, "Missing right parenthesis")
+			os.Exit(65)
+		}
+		p.index++
+		isBlock := false
+		if p.tokens[p.index].tokenType == LEFT_BRACE {
+			p.index++
+			isBlock = true
+		}
+
+		statements := make([]Statement, 0)
+		if isBlock {
+			for p.index < len(p.tokens) &&
+				p.tokens[p.index].tokenType != RIGHT_BRACE &&
+				p.tokens[p.index].tokenType != EOF {
+
+				statement := p.parseStatement()
+				if statement == nil {
+					fmt.Fprintf(os.Stderr, "Error parsing statement at index %d\n", p.index)
+					panic("error while parsing")
+				}
+				statements = append(statements, statement)
+			}
+			if p.index >= len(p.tokens) || p.tokens[p.index].tokenType != RIGHT_BRACE {
+				fmt.Fprintln(os.Stderr, "Missing right brace")
+				os.Exit(65)
+			}
+			p.index++
+		} else {
+			statement := p.parseStatement()
+			if statement == nil {
+				fmt.Fprintf(os.Stderr, "Error parsing statement at index %d\n", p.index)
+				panic("error while parsing")
+			}
+			statements = append(statements, statement)
+		}
+
+		return &WhileStatement{
+			expr:       expr,
+			statements: statements,
 		}
 	}
 
