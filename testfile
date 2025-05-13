@@ -1,5 +1,1 @@
-
-for (var foo = 0; foo < 2;) {
-  print foo;
-  foo = foo + 1;
-}
+for (var baz = 0; baz < 3;) print baz = baz + 1;

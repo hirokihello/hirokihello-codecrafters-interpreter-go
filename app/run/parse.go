@@ -503,7 +503,6 @@ func (p *Parser) parseStatement() Statement {
 			p.index++
 			isBlock = true
 		}
-		fmt.Printf("p.index: %d\n", p.index)
 		statements := make([]Statement, 0)
 		if isBlock {
 			for p.index < len(p.tokens) &&
@@ -529,7 +528,6 @@ func (p *Parser) parseStatement() Statement {
 				panic("error while parsing")
 			}
 			statements = append(statements, statement)
-			p.index++;
 		}
 
 		return &ForStatement{
@@ -542,7 +540,7 @@ func (p *Parser) parseStatement() Statement {
 
 	// ただの式。特に何かをしているわけではない。
 	expression, err := p.parseAssignment()
-	if p.tokens[p.index].value == SEMICOLON {
+	if p.tokens[p.index].tokenType == SEMICOLON {
 		p.index++
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)

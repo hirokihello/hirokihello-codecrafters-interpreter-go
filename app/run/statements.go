@@ -77,7 +77,6 @@ type ForStatement struct {
 }
 
 func (f *ForStatement) Execute(parentEnv *Env) error {
-
 	newEnv := parentEnv.NewChildEnv()
 
 	if err := f.firstStatement.Execute(newEnv); err != nil {
@@ -85,14 +84,16 @@ func (f *ForStatement) Execute(parentEnv *Env) error {
 		return err
 	}
 
+
 	for isTrueString(f.expression.getValue(newEnv).value) {
+		grandChildEnv := newEnv.NewChildEnv()
 		for _, statement := range f.statements {
-			if err := statement.Execute(newEnv); err != nil {
-				setParentEnv(parentEnv, newEnv)
+			if err := statement.Execute(grandChildEnv); err != nil {
+				setParentEnv(newEnv, grandChildEnv)
 				return err
 			}
+			setParentEnv(newEnv, grandChildEnv)
 		}
-
 		if err := f.endStatement.Execute(newEnv); err != nil {
 			setParentEnv(parentEnv, newEnv)
 			return err
