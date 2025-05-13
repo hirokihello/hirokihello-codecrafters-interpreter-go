@@ -551,7 +551,7 @@ func (p *Parser) parseStatement() Statement {
 		}
 	}
 
-	fmt.Printf("Unknown token: %s\n", p.tokens[p.index].tokenType)
+	// fmt.Printf("Unknown token: %s\n", p.tokens[p.index].tokenType)
 	panic("unknown statement")
 }
 
@@ -831,7 +831,7 @@ func (p *Parser) parsePrimary() (Node, error) {
 		}, nil
 	}
 
-	fmt.Printf("Unknown token: %s\n", token.tokenType)
+	// fmt.Printf("Unknown token: %s\n", token.tokenType)
 	return &NilNode{}, fmt.Errorf("unknown expression")
 }
 
