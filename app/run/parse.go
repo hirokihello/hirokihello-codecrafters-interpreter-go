@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 )
 
 const (
@@ -43,6 +44,7 @@ const (
 	AND           = "AND"
 	WHILE         = "WHILE"
 	FOR           = "FOR"
+	FUNC          = "FUNC"
 )
 
 var reservedTokens = map[string]string{
@@ -148,6 +150,13 @@ type Binary struct {
 type IdentifierNode struct {
 	Node
 	value     string
+	tokenType string
+}
+
+type FuncNode struct {
+	Node
+	callee    Node
+	arguments []Node
 	tokenType string
 }
 
@@ -452,7 +461,7 @@ func (p *Parser) parseStatement() Statement {
 			statements: statements,
 		}
 	} else if p.tokens[p.index].tokenType == FOR {
-		p.index++;
+		p.index++
 		if p.tokens[p.index].tokenType != LEFT_PAREN {
 			fmt.Fprintln(os.Stderr, "Missing left parenthesis")
 			os.Exit(65)
@@ -531,10 +540,10 @@ func (p *Parser) parseStatement() Statement {
 		}
 
 		return &ForStatement{
-			firstStatement:  firstStatement,
-			expression:      expression,
-			endStatement:    endStatement,
-			statements:      statements,
+			firstStatement: firstStatement,
+			expression:     expression,
+			endStatement:   endStatement,
+			statements:     statements,
 		}
 	}
 
@@ -551,7 +560,6 @@ func (p *Parser) parseStatement() Statement {
 		}
 	}
 
-	// fmt.Printf("Unknown token: %s\n", p.tokens[p.index].tokenType)
 	panic("unknown statement")
 }
 
@@ -772,8 +780,46 @@ func (p *Parser) parseUnary() (Node, error) {
 		}, nil
 	}
 
-	return p.parsePrimary()
+	return p.parseCall()
 }
+
+func (p *Parser) parseCall() (Node, error) {
+	expr, err := p.parsePrimary()
+	if err != nil {
+		return nil, err
+	}
+
+	// 関数呼び出しの場合の処理
+	if p.index < len(p.tokens) && p.tokens[p.index].tokenType == LEFT_PAREN {
+		p.index++
+		args := make([]Node, 0)
+		for p.index < len(p.tokens) && p.tokens[p.index].tokenType != RIGHT_PAREN {
+			arg, err := p.parseAssignment()
+			if err != nil {
+				return nil, err
+			}
+			args = append(args, arg)
+			if p.index < len(p.tokens) && p.tokens[p.index].tokenType == COMMA {
+				p.index++
+			} else {
+				return nil, fmt.Errorf("missing comma")
+			}
+		}
+		if p.index < len(p.tokens) && p.tokens[p.index].tokenType == RIGHT_PAREN {
+			p.index++
+		} else {
+			return nil, fmt.Errorf("missing right parenthesis")
+		}
+
+		return &FuncNode{
+			callee:    expr,
+			arguments: args,
+			tokenType: FUNC,
+		}, nil
+	}
+	return expr, err
+}
+
 func (p *Parser) parsePrimary() (Node, error) {
 	token := p.tokens[p.index]
 
@@ -831,7 +877,6 @@ func (p *Parser) parsePrimary() (Node, error) {
 		}, nil
 	}
 
-	// fmt.Printf("Unknown token: %s\n", token.tokenType)
 	return &NilNode{}, fmt.Errorf("unknown expression")
 }
 
@@ -1143,4 +1188,11 @@ func isTrueString(value string) bool {
 		return false
 	}
 	return true
+}
+
+func (f *FuncNode) getValue(env *Env) EvaluateNode {
+	return EvaluateNode{
+		value:     strconv.FormatInt(time.Now().Unix(), 10),
+		valueType: NUMBER,
+	}
 }
