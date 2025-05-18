@@ -1,12 +1,11 @@
 package run
 
 import (
-	"errors"
 	"fmt"
 )
 
 type Statement interface {
-	Execute(env *Env) error
+	Execute(env *Env) *ReturnError
 }
 
 type PrintStatement struct {
@@ -29,11 +28,6 @@ type FunStatement struct {
 type ExpressionStatement struct {
 	Statement
 	expr Node
-}
-
-func (e *ExpressionStatement) Execute(env *Env) error {
-	e.expr.getValue(env)
-	return nil
 }
 
 // var xxx = yyy; の時に生成されるやつ
@@ -71,11 +65,17 @@ type ReturnStatement struct {
 	expr Node
 }
 
-func (r *ReturnStatement) Execute(env *Env) error {
-	return errors.New(r.expr.getValue(env).value)
+type ReturnError struct {
+	value     string
+	valueType string
 }
 
-func (b *BlockStatement) Execute(env *Env) error {
+func (e *ExpressionStatement) Execute(env *Env) *ReturnError {
+	e.expr.getValue(env)
+	return nil
+}
+
+func (b *BlockStatement) Execute(env *Env) *ReturnError {
 	newEnv := env.NewChildEnv()
 	for _, statement := range b.statements {
 		if err := statement.Execute(newEnv); err != nil {
@@ -86,14 +86,14 @@ func (b *BlockStatement) Execute(env *Env) error {
 	return nil
 }
 
-func (p *PrintStatement) Execute(env *Env) error {
+func (p *PrintStatement) Execute(env *Env) *ReturnError {
 	value := p.expr.getValue(env).value
 	fmt.Println(value)
 
 	return nil
 }
 
-func (f *ForStatement) Execute(parentEnv *Env) error {
+func (f *ForStatement) Execute(parentEnv *Env) *ReturnError {
 	newEnv := parentEnv.NewChildEnv()
 
 	if err := f.firstStatement.Execute(newEnv); err != nil {
@@ -119,14 +119,14 @@ func (f *ForStatement) Execute(parentEnv *Env) error {
 	return nil
 }
 
-func (v *VariableStatement) Execute(env *Env) error {
+func (v *VariableStatement) Execute(env *Env) *ReturnError {
 	value := v.expr.getValue(env)
 	// 変数の値をセットする
 	(*env.variables)[v.varName] = value
 	return nil
 }
 
-func (i *IfStatement) Execute(parentEnv *Env) error {
+func (i *IfStatement) Execute(parentEnv *Env) *ReturnError {
 	value := i.expr.getValue(parentEnv)
 	newEnv := parentEnv.NewChildEnv()
 	statements := []Statement{}
@@ -149,14 +149,14 @@ func (i *IfStatement) Execute(parentEnv *Env) error {
 	for _, statement := range statements {
 		if err := statement.Execute(newEnv); err != nil {
 			setParentEnv(parentEnv, newEnv)
-			panic(err)
+			return err
 		}
 		setParentEnv(parentEnv, newEnv)
 	}
 	return nil
 }
 
-func (w *WhileStatement) Execute(parentEnv *Env) error {
+func (w *WhileStatement) Execute(parentEnv *Env) *ReturnError {
 	value := w.expr.getValue(parentEnv)
 	newEnv := parentEnv.NewChildEnv()
 	for isTrueString(value.value) {
@@ -173,7 +173,7 @@ func (w *WhileStatement) Execute(parentEnv *Env) error {
 	return nil
 }
 
-func (f *FunStatement) Execute(env *Env) error {
+func (f *FunStatement) Execute(env *Env) *ReturnError {
 	// 関数の定義をセットする
 	(*env.functions)["<fn "+f.name+">"] = Function{
 		name:       f.name,
@@ -187,6 +187,14 @@ func (f *FunStatement) Execute(env *Env) error {
 	return nil
 }
 
+func (r *ReturnStatement) Execute(env *Env) *ReturnError {
+	node := r.expr.getValue(env)
+	return &ReturnError{
+		value:     node.value,
+		valueType: node.valueType,
+	}
+}
+
 func setParentEnv(parentEnv *Env, childEnv *Env) {
 	for k, v := range *childEnv.parentVariables {
 		if _, ok := (*parentEnv.variables)[k]; ok {
@@ -196,4 +204,8 @@ func setParentEnv(parentEnv *Env, childEnv *Env) {
 			}
 		}
 	}
+}
+
+func (r *ReturnError) Error() string {
+	return r.valueType + " " + r.value
 }

@@ -1,7 +1,6 @@
 package run
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -601,7 +600,7 @@ func (p *Parser) parseStatement() (Statement, error) {
 			statements: statements,
 		}, nil
 	} else if p.tokens[p.index].tokenType == RETURN {
-		p.index++;
+		p.index++
 		var expr Node
 		var err error
 		if p.tokens[p.index].tokenType == SEMICOLON {
@@ -960,9 +959,9 @@ func (u *Unary) getValue(env *Env) EvaluateNode {
 			fmt.Fprintf(os.Stderr, "Operand must be a number.")
 			os.Exit(70)
 		}
-		num, _ := strconv.Atoi(u.right.getValue(env).value)
+		num, _ := strconv.ParseFloat(u.right.getValue(env).value, 64)
 		return EvaluateNode{
-			value:     strconv.FormatFloat(float64(num*-1), 'f', -1, 64),
+			value:     strconv.FormatFloat(-num, 'f', -1, 64),
 			valueType: NUMBER,
 		}
 	} else if u.operator.tokenType == BANG {
@@ -1241,8 +1240,8 @@ func (b *Binary) getValue(env *Env) EvaluateNode {
 
 func (e *EvaluateNode) getValue(env *Env) EvaluateNode {
 	return EvaluateNode{
-		value:     e.getValue(env).value,
-		valueType: e.getValue(env).valueType,
+		value:     e.value,
+		valueType: e.valueType,
 	}
 }
 
@@ -1278,23 +1277,31 @@ func (f *FuncNode) getValue(env *Env) EvaluateNode {
 			os.Exit(70)
 		}
 
+		newEnv := env.NewChildEnv()
 		for index, arg := range f.arguments {
-			(*env.variables)[funcDef.parameters[index]] = EvaluateNode{
-				value:     arg.getValue(env).value,
-				valueType: arg.getValue(env).valueType,
+			argument := arg.getValue(newEnv)
+			(*newEnv.variables)[funcDef.parameters[index]] = EvaluateNode{
+				value:     argument.value,
+				valueType: argument.valueType,
 			}
 		}
 
+
 		for _, statement := range funcStatements {
-			err := statement.Execute(env)
+			// 実際にはエラーではないが、エラーとして扱う
+			// 実際には return で返ってくるものが入っている
+			err := statement.Execute(newEnv)
 			if err != nil {
 				return EvaluateNode{
-					value:     err.Error(),
-					valueType: STRING,
+					value:     err.value,
+					valueType: err.valueType,
 				}
 			}
 		}
 	}
 
-	return EvaluateNode{}
+	return EvaluateNode{
+		value:     "nil",
+		valueType: NIL,
+	}
 }
