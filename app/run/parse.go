@@ -165,7 +165,11 @@ type FuncNode struct {
 func (p *Parser) parseStatements() []Statement {
 	statements := make([]Statement, 0)
 	for p.index < len(p.tokens) && p.tokens[p.index].tokenType != EOF {
-		statement := p.parseStatement()
+		statement, err := p.parseStatement()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err) // Changed from os.Err(err) to fmt.Fprintln
+			os.Exit(65)
+		}
 		if statement == nil {
 			fmt.Fprintf(os.Stderr, "Error parsing statement at index %d\n", p.index)
 			panic("error while parsing")
@@ -175,7 +179,7 @@ func (p *Parser) parseStatements() []Statement {
 	return statements
 }
 
-func (p *Parser) parseStatement() Statement {
+func (p *Parser) parseStatement() (Statement, error)  {
 	if p.index >= len(p.tokens) {
 		panic("Index out of range")
 	} else if p.tokens[p.index].tokenType == IF {
@@ -208,7 +212,7 @@ func (p *Parser) parseStatement() Statement {
 				p.tokens[p.index].tokenType != EOF &&
 				p.tokens[p.index].tokenType != ELSE {
 
-				statement := p.parseStatement()
+				statement, _ := p.parseStatement()
 				if statement == nil {
 					fmt.Fprintf(os.Stderr, "Error parsing statement at index %d\n", p.index)
 					panic("error while parsing")
@@ -221,7 +225,7 @@ func (p *Parser) parseStatement() Statement {
 			}
 			p.index++
 		} else {
-			statement := p.parseStatement()
+			statement, _ := p.parseStatement()
 			if statement == nil {
 				fmt.Fprintf(os.Stderr, "Error parsing statement at index %d\n", p.index)
 				panic("error while parsing")
@@ -268,7 +272,7 @@ func (p *Parser) parseStatement() Statement {
 						p.tokens[p.index].tokenType != RIGHT_BRACE &&
 						p.tokens[p.index].tokenType != EOF &&
 						p.tokens[p.index].tokenType != ELSE {
-						statement := p.parseStatement()
+						statement, _ := p.parseStatement()
 						if statement == nil {
 							fmt.Fprintf(os.Stderr, "Error parsing statement at index %d\n", p.index)
 							panic("error while parsing")
@@ -285,7 +289,7 @@ func (p *Parser) parseStatement() Statement {
 						p.tokens[p.index].tokenType != RIGHT_BRACE &&
 						p.tokens[p.index].tokenType != EOF &&
 						p.tokens[p.index].tokenType != ELSE {
-						statement := p.parseStatement()
+						statement, _ := p.parseStatement()
 						if statement == nil {
 							fmt.Fprintf(os.Stderr, "Error parsing statement at index %d\n", p.index)
 							panic("error while parsing")
@@ -306,7 +310,7 @@ func (p *Parser) parseStatement() Statement {
 						p.tokens[p.index].tokenType != RIGHT_BRACE &&
 						p.tokens[p.index].tokenType != EOF &&
 						p.tokens[p.index].tokenType != ELSE {
-						statement := p.parseStatement()
+						statement, _ := p.parseStatement()
 						if statement == nil {
 							fmt.Fprintf(os.Stderr, "Error parsing statement at index %d\n", p.index)
 							panic("error while parsing")
@@ -315,7 +319,7 @@ func (p *Parser) parseStatement() Statement {
 					}
 				} else {
 					if p.index < len(p.tokens) && p.tokens[p.index].tokenType != SEMICOLON && p.tokens[p.index].tokenType != EOF {
-						statement := p.parseStatement()
+						statement, _ := p.parseStatement()
 						if statement == nil {
 							fmt.Fprintf(os.Stderr, "Error parsing statement at index %d\n", p.index)
 							panic("error while parsing")
@@ -338,12 +342,12 @@ func (p *Parser) parseStatement() Statement {
 			statements:       statements,
 			elseStatements:   elseStatements,
 			elseIfStatements: elseIfStatements,
-		}
+		}, nil
 	} else if p.tokens[p.index].tokenType == LEFT_BRACE {
 		p.index++
 		statements := make([]Statement, 0)
 		for p.index < len(p.tokens) && p.tokens[p.index].tokenType != RIGHT_BRACE && p.tokens[p.index].tokenType != EOF {
-			statement := p.parseStatement()
+			statement, _ := p.parseStatement()
 			if statement == nil {
 				fmt.Fprintf(os.Stderr, "Error parsing statement at index %d\n", p.index)
 				panic("error while parsing")
@@ -357,7 +361,7 @@ func (p *Parser) parseStatement() Statement {
 		p.index++
 		return &BlockStatement{
 			statements: statements,
-		}
+		}, nil
 	} else if p.tokens[p.index].tokenType == PRINT {
 		p.index++
 		if p.tokens[p.index].value == ";" {
@@ -373,10 +377,10 @@ func (p *Parser) parseStatement() Statement {
 			}
 			return &PrintStatement{
 				expr: expr,
-			}
+			}, nil
 		}
 
-		panic("; is missing")
+		return nil, fmt.Errorf("syntax error")
 	} else if p.tokens[p.index].tokenType == VAR {
 		p.index++
 		varName := p.tokens[p.index].value
@@ -387,7 +391,7 @@ func (p *Parser) parseStatement() Statement {
 			return &VariableStatement{
 				expr:    &NilNode{value: "nil", tokenType: NIL},
 				varName: varName,
-			}
+			}, nil
 		}
 		if p.tokens[p.index].value != "=" {
 			panic("= is missing")
@@ -406,7 +410,7 @@ func (p *Parser) parseStatement() Statement {
 		return &VariableStatement{
 			expr:    varValue,
 			varName: varName,
-		}
+		}, nil
 	} else if p.tokens[p.index].tokenType == WHILE {
 		p.index++
 		if p.tokens[p.index].tokenType != LEFT_PAREN {
@@ -436,7 +440,7 @@ func (p *Parser) parseStatement() Statement {
 				p.tokens[p.index].tokenType != RIGHT_BRACE &&
 				p.tokens[p.index].tokenType != EOF {
 
-				statement := p.parseStatement()
+				statement, _ := p.parseStatement()
 				if statement == nil {
 					fmt.Fprintf(os.Stderr, "Error parsing statement at index %d\n", p.index)
 					panic("error while parsing")
@@ -449,7 +453,7 @@ func (p *Parser) parseStatement() Statement {
 			}
 			p.index++
 		} else {
-			statement := p.parseStatement()
+			statement, _ := p.parseStatement()
 			if statement == nil {
 				fmt.Fprintf(os.Stderr, "Error parsing statement at index %d\n", p.index)
 				panic("error while parsing")
@@ -460,7 +464,7 @@ func (p *Parser) parseStatement() Statement {
 		return &WhileStatement{
 			expr:       expr,
 			statements: statements,
-		}
+		}, nil
 	} else if p.tokens[p.index].tokenType == FOR {
 		p.index++
 		if p.tokens[p.index].tokenType != LEFT_PAREN {
@@ -473,7 +477,7 @@ func (p *Parser) parseStatement() Statement {
 		var firstStatement Statement
 		// セミコロンでなければ、最初の文をパースする
 		if p.tokens[p.index].tokenType != SEMICOLON {
-			firstStatement = p.parseStatement()
+			firstStatement, _ = p.parseStatement()
 		} else {
 			// セミコロンの場合は、nil を代入する
 			p.index++
@@ -519,7 +523,7 @@ func (p *Parser) parseStatement() Statement {
 				p.tokens[p.index].tokenType != RIGHT_BRACE &&
 				p.tokens[p.index].tokenType != EOF {
 
-				statement := p.parseStatement()
+				statement, _ := p.parseStatement()
 				if statement == nil {
 					fmt.Fprintf(os.Stderr, "Error parsing statement at index %d\n", p.index)
 					panic("error while parsing")
@@ -532,7 +536,7 @@ func (p *Parser) parseStatement() Statement {
 			}
 			p.index++
 		} else {
-			statement := p.parseStatement()
+			statement, _ := p.parseStatement()
 			if statement == nil {
 				fmt.Fprintf(os.Stderr, "Error parsing statement at index %d\n", p.index)
 				panic("error while parsing")
@@ -545,7 +549,7 @@ func (p *Parser) parseStatement() Statement {
 			expression:     expression,
 			endStatement:   endStatement,
 			statements:     statements,
-		}
+		}, nil
 	} else if p.tokens[p.index].tokenType == FUN {
 		// fun の部分の index を ++ する
 		p.index++
@@ -556,7 +560,7 @@ func (p *Parser) parseStatement() Statement {
 
 		if p.tokens[p.index].tokenType != LEFT_PAREN {
 			// 一旦 syntax error にしておく
-			panic("syntax error")
+			return nil, fmt.Errorf("syntax error")
 		}
 
 		p.index++
@@ -573,13 +577,13 @@ func (p *Parser) parseStatement() Statement {
 		p.index++
 
 		if p.tokens[p.index].tokenType != LEFT_BRACE {
-			panic("syntax error")
+			return nil, fmt.Errorf("syntax error")
 		}
 
 		p.index++
 		statements := make([]Statement, 0)
 		for p.index < len(p.tokens) && p.tokens[p.index].tokenType != RIGHT_BRACE {
-			statement := p.parseStatement()
+			statement, _ := p.parseStatement()
 			if statement == nil {
 				fmt.Fprintf(os.Stderr, "Error parsing statement at index %d\n", p.index)
 				panic("error while parsing")
@@ -592,7 +596,7 @@ func (p *Parser) parseStatement() Statement {
 			name:       funName,
 			parameters: parameters,
 			statements: statements,
-		}
+		}, nil
 	}
 
 	// ただの式。特に何かをしているわけではない。
@@ -605,7 +609,7 @@ func (p *Parser) parseStatement() Statement {
 		}
 		return &ExpressionStatement{
 			expr: expression,
-		}
+		}, nil
 	}
 
 	panic("unknown statement")
@@ -863,7 +867,8 @@ func (p *Parser) parseCall() (Node, error) {
 			tokenType: FUN,
 		}, nil
 	}
-	return expr, err
+
+	return expr, nil
 }
 
 func (p *Parser) parsePrimary() (Node, error) {
