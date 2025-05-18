@@ -44,7 +44,7 @@ const (
 	AND           = "AND"
 	WHILE         = "WHILE"
 	FOR           = "FOR"
-	FUNC          = "FUNC"
+	FUN           = "FUN"
 )
 
 var reservedTokens = map[string]string{
@@ -75,6 +75,7 @@ var reservedTokens = map[string]string{
 	"and":   AND,
 	"while": WHILE,
 	"for":   FOR,
+	"fun":   FUN,
 }
 
 type Token struct {
@@ -545,6 +546,53 @@ func (p *Parser) parseStatement() Statement {
 			endStatement:   endStatement,
 			statements:     statements,
 		}
+	} else if p.tokens[p.index].tokenType == FUN {
+		// fun の部分の index を ++ する
+		p.index++
+
+		funName := p.tokens[p.index].value
+
+		p.index++
+
+		if p.tokens[p.index].tokenType != LEFT_PAREN {
+			// 一旦 syntax error にしておく
+			panic("syntax error")
+		}
+
+		p.index++
+		var parameters []string
+		for p.tokens[p.index].tokenType != RIGHT_PAREN {
+			parameter := p.tokens[p.index].value
+			parameters = append(parameters, parameter)
+			p.index++
+			if p.tokens[p.index].tokenType != COMMA {
+				break
+			}
+			p.index++
+		}
+		p.index++
+
+		if p.tokens[p.index].tokenType != LEFT_BRACE {
+			panic("syntax error")
+		}
+
+		p.index++
+		statements := make([]Statement, 0)
+		for p.index < len(p.tokens) && p.tokens[p.index].tokenType != RIGHT_BRACE {
+			statement := p.parseStatement()
+			if statement == nil {
+				fmt.Fprintf(os.Stderr, "Error parsing statement at index %d\n", p.index)
+				panic("error while parsing")
+			}
+			statements = append(statements, statement)
+		}
+		// to do
+		p.index++
+		return &FunStatement{
+			name:       funName,
+			parameters: parameters,
+			statements: statements,
+		}
 	}
 
 	// ただの式。特に何かをしているわけではない。
@@ -814,7 +862,7 @@ func (p *Parser) parseCall() (Node, error) {
 		return &FuncNode{
 			callee:    expr,
 			arguments: args,
-			tokenType: FUNC,
+			tokenType: FUN,
 		}, nil
 	}
 	return expr, err
@@ -957,7 +1005,6 @@ func (a *AssignmentNode) getValue(env *Env) EvaluateNode {
 
 func (i *IdentifierNode) getValue(env *Env) EvaluateNode {
 	variables := *env.variables
-
 	if _, ok := variables[i.value]; !ok {
 		fmt.Fprintf(os.Stderr, "Undefined variable '%s'.\n", i.value)
 		os.Exit(70)
@@ -1191,8 +1238,32 @@ func isTrueString(value string) bool {
 }
 
 func (f *FuncNode) getValue(env *Env) EvaluateNode {
-	return EvaluateNode{
-		value:     strconv.FormatInt(time.Now().Unix(), 10),
-		valueType: NUMBER,
+	// return EvaluateNode{
+	// 	value:     strconv.FormatInt(time.Now().Unix(), 10),
+	// 	valueType: NUMBER,
+	// }
+
+	funcName := f.callee.getValue(env).value
+	if funcName == "clock" {
+		return EvaluateNode{
+			value:     strconv.FormatInt(time.Now().Unix(), 10),
+			valueType: NUMBER,
+		}
+	} else {
+		funcStatements := (*env.functions)[funcName].statements
+		if funcStatements == nil {
+			fmt.Fprintf(os.Stderr, "Undefined function '%s'.\n", funcName)
+			os.Exit(70)
+		}
+
+		for _, statement := range funcStatements {
+			err := statement.Execute(env)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error executing function '%s': %v\n", funcName, err)
+				os.Exit(1)
+			}
+		}
 	}
+
+	return EvaluateNode{}
 }

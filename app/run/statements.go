@@ -18,22 +18,11 @@ type BlockStatement struct {
 	statements []Statement
 }
 
-func (b *BlockStatement) Execute(env *Env) error {
-	newEnv := env.NewChildEnv()
-	for _, statement := range b.statements {
-		if err := statement.Execute(newEnv); err != nil {
-			return err
-		}
-	}
-	setParentEnv(env, newEnv)
-	return nil
-}
-
-func (p *PrintStatement) Execute(env *Env) error {
-	value := p.expr.getValue(env).value
-	fmt.Println(value)
-
-	return nil
+type FunStatement struct {
+	Statement
+	name       string
+	parameters []string
+	statements []Statement
 }
 
 type ExpressionStatement struct {
@@ -69,11 +58,29 @@ type WhileStatement struct {
 
 type ForStatement struct {
 	Statement
-	firstStatement  Statement
-	expression      Node
-	endStatement Statement
+	firstStatement Statement
+	expression     Node
+	endStatement   Statement
 	// for の中の文
 	statements []Statement
+}
+
+func (b *BlockStatement) Execute(env *Env) error {
+	newEnv := env.NewChildEnv()
+	for _, statement := range b.statements {
+		if err := statement.Execute(newEnv); err != nil {
+			return err
+		}
+	}
+	setParentEnv(env, newEnv)
+	return nil
+}
+
+func (p *PrintStatement) Execute(env *Env) error {
+	value := p.expr.getValue(env).value
+	fmt.Println(value)
+
+	return nil
 }
 
 func (f *ForStatement) Execute(parentEnv *Env) error {
@@ -83,7 +90,6 @@ func (f *ForStatement) Execute(parentEnv *Env) error {
 		setParentEnv(parentEnv, newEnv)
 		return err
 	}
-
 
 	for isTrueString(f.expression.getValue(newEnv).value) {
 		grandChildEnv := newEnv.NewChildEnv()
@@ -140,17 +146,6 @@ func (i *IfStatement) Execute(parentEnv *Env) error {
 	return nil
 }
 
-func setParentEnv(parentEnv *Env, childEnv *Env) {
-	for k, v := range *childEnv.parentVariables {
-		if _, ok := (*parentEnv.variables)[k]; ok {
-			if (*parentEnv.variables)[k] != v {
-				(*parentEnv.variables)[k] = v
-				(*parentEnv.parentVariables)[k] = v
-			}
-		}
-	}
-}
-
 func (w *WhileStatement) Execute(parentEnv *Env) error {
 	value := w.expr.getValue(parentEnv)
 	newEnv := parentEnv.NewChildEnv()
@@ -166,4 +161,29 @@ func (w *WhileStatement) Execute(parentEnv *Env) error {
 	}
 	setParentEnv(parentEnv, newEnv)
 	return nil
+}
+
+func (f *FunStatement) Execute(env *Env) error {
+	// 関数の定義をセットする
+	(*env.functions)["<fn " + f.name + ">"] = Function{
+		name:       f.name,
+		parameters: f.parameters,
+		statements: f.statements,
+	}
+	(*env.variables)[f.name] = EvaluateNode{
+		value: "<fn " + f.name + ">",
+		valueType: "string",
+	}
+	return nil
+}
+
+func setParentEnv(parentEnv *Env, childEnv *Env) {
+	for k, v := range *childEnv.parentVariables {
+		if _, ok := (*parentEnv.variables)[k]; ok {
+			if (*parentEnv.variables)[k] != v {
+				(*parentEnv.variables)[k] = v
+				(*parentEnv.parentVariables)[k] = v
+			}
+		}
+	}
 }
