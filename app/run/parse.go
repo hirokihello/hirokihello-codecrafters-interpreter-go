@@ -847,10 +847,9 @@ func (p *Parser) parseCall() (Node, error) {
 				return nil, err
 			}
 			args = append(args, arg)
+
 			if p.index < len(p.tokens) && p.tokens[p.index].tokenType == COMMA {
 				p.index++
-			} else {
-				return nil, fmt.Errorf("missing comma")
 			}
 		}
 		if p.index < len(p.tokens) && p.tokens[p.index].tokenType == RIGHT_PAREN {
@@ -858,7 +857,6 @@ func (p *Parser) parseCall() (Node, error) {
 		} else {
 			return nil, fmt.Errorf("missing right parenthesis")
 		}
-
 		return &FuncNode{
 			callee:    expr,
 			arguments: args,
@@ -1238,11 +1236,6 @@ func isTrueString(value string) bool {
 }
 
 func (f *FuncNode) getValue(env *Env) EvaluateNode {
-	// return EvaluateNode{
-	// 	value:     strconv.FormatInt(time.Now().Unix(), 10),
-	// 	valueType: NUMBER,
-	// }
-
 	funcName := f.callee.getValue(env).value
 	if funcName == "clock" {
 		return EvaluateNode{
@@ -1250,10 +1243,18 @@ func (f *FuncNode) getValue(env *Env) EvaluateNode {
 			valueType: NUMBER,
 		}
 	} else {
-		funcStatements := (*env.functions)[funcName].statements
+		funcDef := (*env.functions)[funcName]
+		funcStatements := funcDef.statements
 		if funcStatements == nil {
 			fmt.Fprintf(os.Stderr, "Undefined function '%s'.\n", funcName)
 			os.Exit(70)
+		}
+
+		for index, arg := range f.arguments {
+			(*env.variables)[funcDef.parameters[index]] = EvaluateNode{
+				value:     arg.getValue(env).value,
+				valueType: arg.getValue(env).valueType,
+			}
 		}
 
 		for _, statement := range funcStatements {
