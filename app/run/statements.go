@@ -1,6 +1,7 @@
 package run
 
 import (
+	"errors"
 	"fmt"
 )
 
@@ -63,6 +64,15 @@ type ForStatement struct {
 	endStatement   Statement
 	// for の中の文
 	statements []Statement
+}
+
+type ReturnStatement struct {
+	Statement
+	expr Node
+}
+
+func (r *ReturnStatement) Execute(env *Env) error {
+	return errors.New(r.expr.getValue(env).value)
 }
 
 func (b *BlockStatement) Execute(env *Env) error {
@@ -165,13 +175,13 @@ func (w *WhileStatement) Execute(parentEnv *Env) error {
 
 func (f *FunStatement) Execute(env *Env) error {
 	// 関数の定義をセットする
-	(*env.functions)["<fn " + f.name + ">"] = Function{
+	(*env.functions)["<fn "+f.name+">"] = Function{
 		name:       f.name,
 		parameters: f.parameters,
 		statements: f.statements,
 	}
 	(*env.variables)[f.name] = EvaluateNode{
-		value: "<fn " + f.name + ">",
+		value:     "<fn " + f.name + ">",
 		valueType: "string",
 	}
 	return nil

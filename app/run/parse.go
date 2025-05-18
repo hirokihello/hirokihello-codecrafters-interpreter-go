@@ -1,6 +1,7 @@
 package run
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -45,37 +46,39 @@ const (
 	WHILE         = "WHILE"
 	FOR           = "FOR"
 	FUN           = "FUN"
+	RETURN        = "RETURN"
 )
 
 var reservedTokens = map[string]string{
-	"(":     LEFT_PAREN,
-	")":     RIGHT_PAREN,
-	"{":     LEFT_BRACE,
-	"}":     RIGHT_BRACE,
-	",":     COMMA,
-	".":     DOT,
-	"-":     MINUS,
-	"+":     PLUS,
-	";":     SEMICOLON,
-	"*":     STAR,
-	"=":     EQUAL,
-	"==":    EQUAL_EQUAL,
-	"!=":    BANG_EQUAL,
-	"<":     LESS,
-	"<=":    LESS_EQUAL,
-	">":     GREATER,
-	">=":    GREATER_EQUAL,
-	"/":     SLASH,
-	"!":     BANG,
-	"print": PRINT,
-	"var":   VAR,
-	"if":    IF,
-	"else":  ELSE,
-	"or":    OR,
-	"and":   AND,
-	"while": WHILE,
-	"for":   FOR,
-	"fun":   FUN,
+	"(":      LEFT_PAREN,
+	")":      RIGHT_PAREN,
+	"{":      LEFT_BRACE,
+	"}":      RIGHT_BRACE,
+	",":      COMMA,
+	".":      DOT,
+	"-":      MINUS,
+	"+":      PLUS,
+	";":      SEMICOLON,
+	"*":      STAR,
+	"=":      EQUAL,
+	"==":     EQUAL_EQUAL,
+	"!=":     BANG_EQUAL,
+	"<":      LESS,
+	"<=":     LESS_EQUAL,
+	">":      GREATER,
+	">=":     GREATER_EQUAL,
+	"/":      SLASH,
+	"!":      BANG,
+	"print":  PRINT,
+	"var":    VAR,
+	"if":     IF,
+	"else":   ELSE,
+	"or":     OR,
+	"and":    AND,
+	"while":  WHILE,
+	"for":    FOR,
+	"fun":    FUN,
+	"return": RETURN,
 }
 
 type Token struct {
@@ -179,7 +182,7 @@ func (p *Parser) parseStatements() []Statement {
 	return statements
 }
 
-func (p *Parser) parseStatement() (Statement, error)  {
+func (p *Parser) parseStatement() (Statement, error) {
 	if p.index >= len(p.tokens) {
 		panic("Index out of range")
 	} else if p.tokens[p.index].tokenType == IF {
@@ -596,6 +599,26 @@ func (p *Parser) parseStatement() (Statement, error)  {
 			name:       funName,
 			parameters: parameters,
 			statements: statements,
+		}, nil
+	} else if p.tokens[p.index].tokenType == RETURN {
+		p.index++;
+		var expr Node
+		var err error
+		if p.tokens[p.index].tokenType == SEMICOLON {
+			p.index++
+			expr = &NilNode{value: "nil", tokenType: NIL}
+		} else {
+			expr, err = p.parseAssignment()
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				os.Exit(65)
+			}
+			if p.tokens[p.index].tokenType == SEMICOLON {
+				p.index++
+			}
+		}
+		return &ReturnStatement{
+			expr: expr,
 		}, nil
 	}
 
@@ -1265,8 +1288,10 @@ func (f *FuncNode) getValue(env *Env) EvaluateNode {
 		for _, statement := range funcStatements {
 			err := statement.Execute(env)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error executing function '%s': %v\n", funcName, err)
-				os.Exit(1)
+				return EvaluateNode{
+					value:     err.Error(),
+					valueType: STRING,
+				}
 			}
 		}
 	}
