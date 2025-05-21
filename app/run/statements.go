@@ -196,8 +196,6 @@ func (f *FunStatement) Execute(env *Env) *ReturnError {
 		environment: env,
 	}
 
-	fmt.Printf("f name: %s\n", f.name)
-
 	return nil
 }
 
