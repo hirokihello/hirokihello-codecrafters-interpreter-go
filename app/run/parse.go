@@ -863,7 +863,6 @@ func (p *Parser) parseCall() (Node, error) {
 		return nil, err
 	}
 
-	// 関数呼び出しの場合の処理
 	if p.index < len(p.tokens) && p.tokens[p.index].tokenType == LEFT_PAREN {
 		p.index++
 		args := make([]Node, 0)
@@ -1031,6 +1030,20 @@ func (a *AssignmentNode) getValue(env *Env) EvaluateNode {
 func (i *IdentifierNode) getValue(env *Env) EvaluateNode {
 	variables := *env.variables
 	if _, ok := variables[i.value]; !ok {
+		if _, ok := (*env.parentVariables)[i.value]; ok {
+			return EvaluateNode{
+				value:     (*env.parentVariables)[i.value].value,
+				valueType: (*env.parentVariables)[i.value].valueType,
+			}
+		}
+
+		if _, ok := (*getGlobalEnv().NewChildEnv().variables)[i.value]; ok {
+			return EvaluateNode{
+				value:     (*getGlobalEnv().NewChildEnv().variables)[i.value].value,
+				valueType: (*getGlobalEnv().NewChildEnv().variables)[i.value].valueType,
+			}
+		}
+
 		fmt.Fprintf(os.Stderr, "Undefined variable '%s'.\n", i.value)
 		os.Exit(70)
 	}
@@ -1269,33 +1282,47 @@ func (f *FuncNode) getValue(env *Env) EvaluateNode {
 			value:     strconv.FormatInt(time.Now().Unix(), 10),
 			valueType: NUMBER,
 		}
-	} else {
-		funcDef := (*env.functions)[funcName]
-		funcStatements := funcDef.statements
-		if funcStatements == nil {
-			fmt.Fprintf(os.Stderr, "Undefined function '%s'.\n", funcName)
-			os.Exit(70)
+	}
+
+	funcDef, ok := (*env.functions)[funcName]
+
+	// 現在のスコープになければ親スコープを探す
+	if !ok && env.parentFunctions != nil {
+		funcDef, ok = (*env.parentFunctions)[funcName]
+	}
+
+	// 親スコープにもなければグローバルスコープを探す
+	if !ok {
+		globalEnv := getGlobalEnv()
+		funcDef, ok = (*globalEnv.functions)[funcName]
+	}
+
+	// 関数が見つからなかったらエラー
+	if !ok {
+		fmt.Fprintf(os.Stderr, "Undefined function '%s'.\n", funcName)
+		os.Exit(70)
+	}
+
+	newEnv := env.NewChildEnv()
+	for index, arg := range f.arguments {
+		argument := arg.getValue(newEnv)
+		(*newEnv.variables)[funcDef.parameters[index]] = EvaluateNode{
+			value:     argument.value,
+			valueType: argument.valueType,
 		}
+	}
 
-		newEnv := env.NewChildEnv()
-		for index, arg := range f.arguments {
-			argument := arg.getValue(newEnv)
-			(*newEnv.variables)[funcDef.parameters[index]] = EvaluateNode{
-				value:     argument.value,
-				valueType: argument.valueType,
-			}
-		}
+	// コメント
+	fmt.Printf("function name: %s\n", funcName)
 
-
-		for _, statement := range funcStatements {
-			// 実際にはエラーではないが、エラーとして扱う
-			// 実際には return で返ってくるものが入っている
-			err := statement.Execute(newEnv)
-			if err != nil {
-				return EvaluateNode{
-					value:     err.value,
-					valueType: err.valueType,
-				}
+	for _, statement := range funcDef.statements {
+		// 実際にはエラーではないが、エラーとして扱う
+		// 実際には return で返ってくるものが入っている
+		err := statement.Execute(newEnv)
+		if err != nil {
+			return EvaluateNode{
+				value:     err.value,
+				valueType: err.valueType,
 			}
 		}
 	}

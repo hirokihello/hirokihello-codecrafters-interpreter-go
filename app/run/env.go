@@ -4,12 +4,14 @@ type Env struct {
 	variables       *map[string]EvaluateNode
 	parentVariables *map[string]EvaluateNode
 	functions       *map[string]Function
+	parentFunctions *map[string]Function
 }
 
 type Function struct {
-	name       string
-	parameters []string
-	statements []Statement
+	name        string
+	parameters  []string
+	statements  []Statement
+	environment *Env
 }
 
 func NewEnv() *Env {
@@ -17,10 +19,6 @@ func NewEnv() *Env {
 		variables:       &map[string]EvaluateNode{},
 		parentVariables: &map[string]EvaluateNode{},
 		functions:       &map[string]Function{},
-	}
-	(*env.variables)["clock"] = EvaluateNode{
-		value: "clock",
-		valueType: "string",
 	}
 	return env
 }
@@ -36,18 +34,13 @@ func getGlobalEnv() *Env {
 
 // NewChildEnv creates a new child environment that inherits from the current environment.
 func (e *Env) NewChildEnv() *Env {
-	newEnv := NewEnv()
+	newVariables := make(map[string]EvaluateNode)
+	newFunctions := make(map[string]Function)
 
-	// 環境変数の copy
-	for k, v := range *e.variables {
-		(*newEnv.variables)[k] = v
-		(*newEnv.parentVariables)[k] = v
+	return &Env{
+		variables:       &newVariables,
+		functions:       &newFunctions,
+		parentVariables: e.variables,
+		parentFunctions: e.functions,
 	}
-
-	// functions の copy
-	for k, v := range *e.functions {
-		(*newEnv.functions)[k] = v
-	}
-
-	return newEnv
 }

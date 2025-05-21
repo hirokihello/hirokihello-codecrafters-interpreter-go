@@ -179,11 +179,25 @@ func (f *FunStatement) Execute(env *Env) *ReturnError {
 		name:       f.name,
 		parameters: f.parameters,
 		statements: f.statements,
+		environment: env,
 	}
 	(*env.variables)[f.name] = EvaluateNode{
 		value:     "<fn " + f.name + ">",
 		valueType: "string",
 	}
+
+	// 関数はグローバルから呼び出せるように登録する
+	// とりあえず動くようにする
+	globalEnv := getGlobalEnv()
+	(*globalEnv.functions)["<fn "+f.name+">"] = Function{
+		name:       f.name,
+		parameters: f.parameters,
+		statements: f.statements,
+		environment: env,
+	}
+
+	fmt.Printf("f name: %s\n", f.name)
+
 	return nil
 }
 

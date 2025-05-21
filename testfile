@@ -1,6 +1,13 @@
-fun fib(n) {
-  if (n < 2) return n;
-  return fib(n - 2) + fib(n - 1);
+fun returnArg(arg) {
+  return arg;
 }
 
-print fib(32);
+fun returnFunCallWithArg(func, arg) {
+  return returnArg(func)(arg);
+}
+
+fun printArg(arg) {
+  print arg;
+}
+
+returnFunCallWithArg(printArg, "foo");
