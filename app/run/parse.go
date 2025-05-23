@@ -882,6 +882,46 @@ func (p *Parser) parseCall() (Node, error) {
 		} else {
 			return nil, fmt.Errorf("missing right parenthesis")
 		}
+
+		chain := false
+		for p.index < len(p.tokens) && p.tokens[p.index].tokenType == LEFT_PAREN {
+			chain = true
+			expr = &FuncNode{
+				callee:    expr,
+				arguments: args,
+				tokenType: FUN,
+			}
+			p.index++
+			args = make([]Node, 0)
+			for p.index < len(p.tokens) && p.tokens[p.index].tokenType != RIGHT_PAREN {
+				arg, err := p.parseAssignment()
+				if err != nil {
+					return nil, err
+				}
+				args = append(args, arg)
+
+				if p.index < len(p.tokens) && p.tokens[p.index].tokenType == COMMA {
+					p.index++
+				}
+			}
+			if p.index < len(p.tokens) && p.tokens[p.index].tokenType == RIGHT_PAREN {
+				p.index++
+			} else {
+				return nil, fmt.Errorf("missing right parenthesis")
+			}
+
+			expr = &FuncNode{
+				callee:    expr,
+				arguments: args,
+				tokenType: FUN,
+			}
+		}
+
+		// 関数チェーンの場合はそのまま返す
+		if chain {
+			return expr, nil
+		}
+
 		return &FuncNode{
 			callee:    expr,
 			arguments: args,
@@ -1029,29 +1069,31 @@ func (a *AssignmentNode) getValue(env *Env) EvaluateNode {
 
 func (i *IdentifierNode) getValue(env *Env) EvaluateNode {
 	variables := *env.variables
-	if _, ok := variables[i.value]; !ok {
-		if _, ok := (*env.parentVariables)[i.value]; ok {
-			return EvaluateNode{
-				value:     (*env.parentVariables)[i.value].value,
-				valueType: (*env.parentVariables)[i.value].valueType,
-			}
+	// 1. 変数として探す
+	if _, ok := variables[i.value]; ok {
+		return EvaluateNode{
+			value:     variables[i.value].value,
+			valueType: variables[i.value].valueType,
 		}
-
-		if _, ok := (*getGlobalEnv().NewChildEnv().variables)[i.value]; ok {
-			return EvaluateNode{
-				value:     (*getGlobalEnv().NewChildEnv().variables)[i.value].value,
-				valueType: (*getGlobalEnv().NewChildEnv().variables)[i.value].valueType,
-			}
-		}
-
-		fmt.Fprintf(os.Stderr, "Undefined variable '%s'.\n", i.value)
-		os.Exit(70)
 	}
 
-	return EvaluateNode{
-		value:     variables[i.value].value,
-		valueType: variables[i.value].valueType,
+	if _, ok := (*env.parentVariables)[i.value]; ok {
+		return EvaluateNode{
+			value:     (*env.parentVariables)[i.value].value,
+			valueType: (*env.parentVariables)[i.value].valueType,
+		}
 	}
+
+	if _, ok := (*getGlobalEnv().NewChildEnv().variables)[i.value]; ok {
+		return EvaluateNode{
+			value:     (*getGlobalEnv().NewChildEnv().variables)[i.value].value,
+			valueType: (*getGlobalEnv().NewChildEnv().variables)[i.value].valueType,
+		}
+	}
+
+	fmt.Fprintf(os.Stderr, "Undefined variable '%s'.\n", i.value)
+	os.Exit(70)
+	panic("Undefined variable")
 }
 
 func (s *StringNode) getValue(env *Env) EvaluateNode {
@@ -1311,9 +1353,6 @@ func (f *FuncNode) getValue(env *Env) EvaluateNode {
 			valueType: argument.valueType,
 		}
 	}
-
-	// コメント
-	fmt.Printf("function name: %s\n", funcName)
 
 	for _, statement := range funcDef.statements {
 		// 実際にはエラーではないが、エラーとして扱う
