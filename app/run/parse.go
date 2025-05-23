@@ -1326,6 +1326,7 @@ func (f *FuncNode) getValue(env *Env) EvaluateNode {
 		}
 	}
 
+	fmt.Printf("Function name: %s\n", funcName)
 	funcDef, ok := (*env.functions)[funcName]
 
 	// 現在のスコープになければ親スコープを探す
@@ -1354,6 +1355,7 @@ func (f *FuncNode) getValue(env *Env) EvaluateNode {
 		}
 	}
 
+	fmt.Printf("env: %v\n", newEnv.variables)
 	for _, statement := range funcDef.statements {
 		// 実際にはエラーではないが、エラーとして扱う
 		// 実際には return で返ってくるものが入っている
