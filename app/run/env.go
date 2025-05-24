@@ -1,10 +1,12 @@
 package run
 
 type Env struct {
-	variables       *map[string]EvaluateNode
-	parentVariables *map[string]EvaluateNode
-	functions       *map[string]Function
-	parentFunctions *map[string]Function
+	variables       map[string]EvaluateNode
+	parentVariables map[string]EvaluateNode
+	functions       map[string]Function
+	parentFunctions map[string]Function
+	parentEnv       *Env
+	envType         string
 }
 
 type Function struct {
@@ -16,9 +18,17 @@ type Function struct {
 
 func NewEnv() *Env {
 	env := &Env{
-		variables:       &map[string]EvaluateNode{},
-		parentVariables: &map[string]EvaluateNode{},
-		functions:       &map[string]Function{},
+		variables:       map[string]EvaluateNode{},
+		parentVariables: map[string]EvaluateNode{},
+		functions:       map[string]Function{},
+		parentEnv: &Env{
+			variables:       map[string]EvaluateNode{},
+			parentVariables: map[string]EvaluateNode{},
+			functions:       map[string]Function{},
+			parentEnv:       nil,
+			envType:        "global",
+		},
+		envType: "global",
 	}
 	return env
 }
@@ -26,9 +36,17 @@ func NewEnv() *Env {
 var globalEnv *Env
 
 var funcGlobalEnv *Env = &Env{
-	variables:       &map[string]EvaluateNode{},
-	parentVariables: &map[string]EvaluateNode{},
-	functions:       &map[string]Function{},
+	variables:       map[string]EvaluateNode{},
+	parentVariables: map[string]EvaluateNode{},
+	functions:       map[string]Function{},
+	parentEnv: &Env{
+		variables:       map[string]EvaluateNode{},
+		parentVariables: map[string]EvaluateNode{},
+		functions:       map[string]Function{},
+		parentEnv:       nil,
+		envType:        "global",
+	},
+	envType: "global",
 }
 
 func getGlobalEnv() *Env {
@@ -44,18 +62,20 @@ func (e *Env) NewChildEnv() *Env {
 	newFunctions := make(map[string]Function)
 
 	// Copy the variables and functions from the parent environment
-	for k, v := range *e.variables {
+	for k, v := range e.variables {
 		newVariables[k] = v
 	}
-	for k, v := range *e.functions {
+	for k, v := range e.functions {
 		newFunctions[k] = v
 	}
 
 	return &Env{
-		variables:       &newVariables,
-		functions:       &newFunctions,
+		variables:       newVariables,
+		functions:       newFunctions,
 		parentVariables: e.variables,
 		parentFunctions: e.functions,
+		parentEnv:       e,
+		envType:         "child",
 	}
 }
 
@@ -66,19 +86,21 @@ func (e *Env) newClosureEnv() *Env {
 	newParentFunctions := make(map[string]Function)
 
 	// Copy the variables and functions from the parent environment
-	for k, v := range *e.variables {
+	for k, v := range e.variables {
 		newVariables[k] = v
 		newParentVariables[k] = v
 	}
-	for k, v := range *e.functions {
+	for k, v := range e.functions {
 		newFunctions[k] = v
 		newParentFunctions[k] = v
 	}
 
 	return &Env{
-		variables:       &newVariables,
-		functions:       &newFunctions,
-		parentVariables: &newParentVariables,
-		parentFunctions: &newParentFunctions,
+		variables:       newVariables,
+		functions:       newFunctions,
+		parentVariables: newParentVariables,
+		parentFunctions: newParentFunctions,
+		parentEnv:       e.parentEnv,
+		envType:         "closure",
 	}
 }

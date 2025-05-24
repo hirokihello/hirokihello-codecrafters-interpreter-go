@@ -1042,7 +1042,7 @@ func (g *Group) getValue(env *Env) EvaluateNode {
 }
 
 func (a *AssignmentNode) getValue(env *Env) EvaluateNode {
-	variables := (*env.variables)
+	variables := env.variables
 	if _, ok := variables[a.varName]; !ok {
 		fmt.Fprintf(os.Stderr, "Undefined variable '%s'.\n", a.varName)
 		os.Exit(70)
@@ -1056,8 +1056,8 @@ func (a *AssignmentNode) getValue(env *Env) EvaluateNode {
 	}
 	variables[a.varName] = newValue
 
-	if _, ok := (*env.parentVariables)[a.varName]; ok {
-		(*env.parentVariables)[a.varName] = newValue
+	if _, ok := (env.parentVariables)[a.varName]; ok {
+		(env.parentVariables)[a.varName] = newValue
 	}
 
 	// 変数の値を返す
@@ -1068,7 +1068,7 @@ func (a *AssignmentNode) getValue(env *Env) EvaluateNode {
 }
 
 func (i *IdentifierNode) getValue(env *Env) EvaluateNode {
-	variables := *env.variables
+	variables := env.variables
 
 	// 特殊な組み込み関数の場合
 	if i.value == "clock" {
@@ -1086,17 +1086,17 @@ func (i *IdentifierNode) getValue(env *Env) EvaluateNode {
 		}
 	}
 
-	if _, ok := (*env.parentVariables)[i.value]; ok {
+	if _, ok := (env.parentVariables)[i.value]; ok {
 		return EvaluateNode{
-			value:     (*env.parentVariables)[i.value].value,
-			valueType: (*env.parentVariables)[i.value].valueType,
+			value:     (env.parentVariables)[i.value].value,
+			valueType: (env.parentVariables)[i.value].valueType,
 		}
 	}
 
-	if _, ok := (*getGlobalEnv().variables)[i.value]; ok {
+	if _, ok := (getGlobalEnv().variables)[i.value]; ok {
 		return EvaluateNode{
-			value:     (*getGlobalEnv().variables)[i.value].value,
-			valueType: (*getGlobalEnv().variables)[i.value].valueType,
+			value:     (getGlobalEnv().variables)[i.value].value,
+			valueType: (getGlobalEnv().variables)[i.value].valueType,
 		}
 	}
 
@@ -1336,10 +1336,10 @@ func (f *FuncNode) getValue(env *Env) EvaluateNode {
 		}
 	}
 
-	funcDef, ok := (*funcGlobalEnv.functions)[funcNameOrId]
+	funcDef, ok := (funcGlobalEnv.functions)[funcNameOrId]
 
 	if !ok {
-		funcDef, ok = (*env.functions)[funcNameOrId]
+		funcDef, ok = (env.functions)[funcNameOrId]
 	}
 
 	// 関数が見つからなかったらエラー
@@ -1352,24 +1352,23 @@ func (f *FuncNode) getValue(env *Env) EvaluateNode {
 		fmt.Fprintf(os.Stderr, "Function '%s' expects %d arguments, but got %d.\n", funcNameOrId, len(funcDef.parameters), len(f.arguments))
 		os.Exit(70)
 	}
-
 	newEnv := env.NewChildEnv()
 	for index, arg := range f.arguments {
 		argument := arg.getValue(newEnv)
-		(*newEnv.variables)[funcDef.parameters[index]] = EvaluateNode{
+		(newEnv.variables)[funcDef.parameters[index]] = EvaluateNode{
 			value:     argument.value,
 			valueType: argument.valueType,
 		}
-		(*funcDef.closure.variables)[funcDef.parameters[index]] = EvaluateNode{
+		(funcDef.closure.variables)[funcDef.parameters[index]] = EvaluateNode{
 			value:     argument.value,
 			valueType: argument.valueType,
 		}
 	}
 
 	// closure の値に書き換え
-	for key, value := range *funcDef.closure.variables {
-		if _, ok := (*newEnv.variables)[key]; !ok {
-			(*newEnv.variables)[key] = value
+	for key, value := range funcDef.closure.variables {
+		if _, ok := (newEnv.variables)[key]; !ok {
+			(newEnv.variables)[key] = value
 		}
 	}
 
@@ -1379,7 +1378,7 @@ func (f *FuncNode) getValue(env *Env) EvaluateNode {
 		err := statement.Execute(newEnv)
 		if err != nil {
 			if err.valueType == "function" {
-				(*newEnv.parentFunctions)[err.value] = (*newEnv.functions)[err.value]
+				(newEnv.parentFunctions)[err.value] = (newEnv.functions)[err.value]
 			}
 			return EvaluateNode{
 				value:     err.value,
