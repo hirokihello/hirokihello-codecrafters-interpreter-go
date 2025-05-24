@@ -158,17 +158,16 @@ func (i *IfStatement) Execute(parentEnv *Env) *ReturnError {
 }
 
 func (w *WhileStatement) Execute(parentEnv *Env) *ReturnError {
-	value := w.expr.getValue(parentEnv)
 	newEnv := parentEnv.NewChildEnv()
-	for isTrueString(value.value) {
+	for isTrueString(w.expr.getValue(newEnv).value) {
 		for _, statement := range w.statements {
 			if err := statement.Execute(newEnv); err != nil {
 				setParentEnv(parentEnv, newEnv)
-				panic(err)
+				return err
 			}
 			setParentEnv(parentEnv, newEnv)
 		}
-		value = w.expr.getValue(parentEnv)
+		setParentEnv(parentEnv, newEnv)
 	}
 	setParentEnv(parentEnv, newEnv)
 	return nil
@@ -187,22 +186,22 @@ func getFunctionId(baseStr string) string {
 
 func (f *FunStatement) Execute(env *Env) *ReturnError {
 	// 関数の定義をセットする
-	(*env.functions)["<fn "+ f.name+ ">"] = Function{
+	(*env.functions)["<fn "+f.name+">"] = Function{
 		name:       f.name,
 		parameters: f.parameters,
 		statements: f.statements,
-		closure:   	env.NewChildEnv(),
+		closure:    env.newClosureEnv(),
 	}
 	(*env.variables)[f.name] = EvaluateNode{
 		value:     "<fn " + f.name + ">",
 		valueType: "function",
 	}
 
-	(*funcGlobalEnv.functions)[genFunctionId("<fn "+ f.name+ ">")] = Function{
+	(*funcGlobalEnv.functions)[genFunctionId("<fn "+f.name+">")] = Function{
 		name:       f.name,
 		parameters: f.parameters,
 		statements: f.statements,
-		closure:    env.NewChildEnv(),
+		closure:    env.newClosureEnv(),
 	}
 
 	return nil
@@ -212,7 +211,7 @@ func (r *ReturnStatement) Execute(env *Env) *ReturnError {
 	node := r.expr.getValue(env)
 	if node.valueType == "function" {
 		return &ReturnError{
-			value: getFunctionId(node.value),
+			value:     getFunctionId(node.value),
 			valueType: "function",
 		}
 	}

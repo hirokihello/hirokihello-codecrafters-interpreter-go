@@ -1070,6 +1070,14 @@ func (a *AssignmentNode) getValue(env *Env) EvaluateNode {
 func (i *IdentifierNode) getValue(env *Env) EvaluateNode {
 	variables := *env.variables
 
+	// 特殊な組み込み関数の場合
+	if i.value == "clock" {
+		return EvaluateNode{
+			value:     "clock",
+			valueType: STRING,
+		}
+	}
+
 	// 1. 変数として探す
 	if _, ok := variables[i.value]; ok {
 		return EvaluateNode{
@@ -1334,8 +1342,6 @@ func (f *FuncNode) getValue(env *Env) EvaluateNode {
 		funcDef, ok = (*env.functions)[funcNameOrId]
 	}
 
-
-
 	// 関数が見つからなかったらエラー
 	if !ok {
 		fmt.Fprintf(os.Stderr, "Undefined function '%s'.\n", funcNameOrId)
@@ -1361,7 +1367,6 @@ func (f *FuncNode) getValue(env *Env) EvaluateNode {
 			(*newEnv.variables)[key] = value
 		}
 	}
-
 
 	for _, statement := range funcDef.statements {
 		// 実際にはエラーではないが、エラーとして扱う

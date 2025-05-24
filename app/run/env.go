@@ -58,3 +58,27 @@ func (e *Env) NewChildEnv() *Env {
 		parentFunctions: e.functions,
 	}
 }
+
+func (e *Env) newClosureEnv() *Env {
+	newVariables := make(map[string]EvaluateNode)
+	newFunctions := make(map[string]Function)
+	newParentVariables := make(map[string]EvaluateNode)
+	newParentFunctions := make(map[string]Function)
+
+	// Copy the variables and functions from the parent environment
+	for k, v := range *e.variables {
+		newVariables[k] = v
+		newParentVariables[k] = v
+	}
+	for k, v := range *e.functions {
+		newFunctions[k] = v
+		newParentFunctions[k] = v
+	}
+
+	return &Env{
+		variables:       &newVariables,
+		functions:       &newFunctions,
+		parentVariables: &newParentVariables,
+		parentFunctions: &newParentFunctions,
+	}
+}
