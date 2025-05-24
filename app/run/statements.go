@@ -226,7 +226,6 @@ func setParentEnv(parentEnv *Env, childEnv *Env) {
 		if _, ok := (*parentEnv.variables)[k]; ok {
 			if (*parentEnv.variables)[k] != v {
 				(*parentEnv.variables)[k] = v
-				(*parentEnv.parentVariables)[k] = v
 			}
 		}
 	}
