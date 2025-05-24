@@ -23,6 +23,7 @@ type FunStatement struct {
 	name       string
 	parameters []string
 	statements []Statement
+	closure    *Env
 }
 
 type ExpressionStatement struct {
@@ -173,27 +174,35 @@ func (w *WhileStatement) Execute(parentEnv *Env) *ReturnError {
 	return nil
 }
 
+var functionIdCounter = 0
+
+func genFunctionId(baseStr string) string {
+	functionIdCounter++
+	return fmt.Sprintf("%s-%d", baseStr, functionIdCounter)
+}
+
+func getFunctionId(baseStr string) string {
+	return fmt.Sprintf("%s-%d", baseStr, functionIdCounter)
+}
+
 func (f *FunStatement) Execute(env *Env) *ReturnError {
 	// 関数の定義をセットする
-	(*env.functions)["<fn "+f.name+">"] = Function{
+	(*env.functions)["<fn "+ f.name+ ">"] = Function{
 		name:       f.name,
 		parameters: f.parameters,
 		statements: f.statements,
-		environment: env,
+		closure:   	env.NewChildEnv(),
 	}
 	(*env.variables)[f.name] = EvaluateNode{
 		value:     "<fn " + f.name + ">",
-		valueType: "string",
+		valueType: "function",
 	}
 
-	// 関数はグローバルから呼び出せるように登録する
-	// とりあえず動くようにする
-	globalEnv := getGlobalEnv()
-	(*globalEnv.functions)["<fn "+f.name+">"] = Function{
+	(*funcGlobalEnv.functions)[genFunctionId("<fn "+ f.name+ ">")] = Function{
 		name:       f.name,
 		parameters: f.parameters,
 		statements: f.statements,
-		environment: env,
+		closure:    env.NewChildEnv(),
 	}
 
 	return nil
@@ -201,6 +210,12 @@ func (f *FunStatement) Execute(env *Env) *ReturnError {
 
 func (r *ReturnStatement) Execute(env *Env) *ReturnError {
 	node := r.expr.getValue(env)
+	if node.valueType == "function" {
+		return &ReturnError{
+			value: getFunctionId(node.value),
+			valueType: "function",
+		}
+	}
 	return &ReturnError{
 		value:     node.value,
 		valueType: node.valueType,

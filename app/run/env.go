@@ -8,10 +8,10 @@ type Env struct {
 }
 
 type Function struct {
-	name        string
-	parameters  []string
-	statements  []Statement
-	environment *Env
+	name       string
+	parameters []string
+	statements []Statement
+	closure    *Env
 }
 
 func NewEnv() *Env {
@@ -24,6 +24,12 @@ func NewEnv() *Env {
 }
 
 var globalEnv *Env
+
+var funcGlobalEnv *Env = &Env{
+	variables:       &map[string]EvaluateNode{},
+	parentVariables: &map[string]EvaluateNode{},
+	functions:       &map[string]Function{},
+}
 
 func getGlobalEnv() *Env {
 	if globalEnv == nil {

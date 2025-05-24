@@ -1069,6 +1069,7 @@ func (a *AssignmentNode) getValue(env *Env) EvaluateNode {
 
 func (i *IdentifierNode) getValue(env *Env) EvaluateNode {
 	variables := *env.variables
+
 	// 1. 変数として探す
 	if _, ok := variables[i.value]; ok {
 		return EvaluateNode{
@@ -1084,10 +1085,10 @@ func (i *IdentifierNode) getValue(env *Env) EvaluateNode {
 		}
 	}
 
-	if _, ok := (*getGlobalEnv().NewChildEnv().variables)[i.value]; ok {
+	if _, ok := (*getGlobalEnv().variables)[i.value]; ok {
 		return EvaluateNode{
-			value:     (*getGlobalEnv().NewChildEnv().variables)[i.value].value,
-			valueType: (*getGlobalEnv().NewChildEnv().variables)[i.value].valueType,
+			value:     (*getGlobalEnv().variables)[i.value].value,
+			valueType: (*getGlobalEnv().variables)[i.value].valueType,
 		}
 	}
 
@@ -1318,31 +1319,26 @@ func isTrueString(value string) bool {
 }
 
 func (f *FuncNode) getValue(env *Env) EvaluateNode {
-	funcName := f.callee.getValue(env).value
-	if funcName == "clock" {
+	funcNameOrId := f.callee.getValue(env).value
+
+	if funcNameOrId == "clock" {
 		return EvaluateNode{
 			value:     strconv.FormatInt(time.Now().Unix(), 10),
 			valueType: NUMBER,
 		}
 	}
 
-	fmt.Printf("Function name: %s\n", funcName)
-	funcDef, ok := (*env.functions)[funcName]
+	funcDef, ok := (*funcGlobalEnv.functions)[funcNameOrId]
 
-	// 現在のスコープになければ親スコープを探す
-	if !ok && env.parentFunctions != nil {
-		funcDef, ok = (*env.parentFunctions)[funcName]
-	}
-
-	// 親スコープにもなければグローバルスコープを探す
 	if !ok {
-		globalEnv := getGlobalEnv()
-		funcDef, ok = (*globalEnv.functions)[funcName]
+		funcDef, ok = (*env.functions)[funcNameOrId]
 	}
+
+
 
 	// 関数が見つからなかったらエラー
 	if !ok {
-		fmt.Fprintf(os.Stderr, "Undefined function '%s'.\n", funcName)
+		fmt.Fprintf(os.Stderr, "Undefined function '%s'.\n", funcNameOrId)
 		os.Exit(70)
 	}
 
@@ -1353,14 +1349,28 @@ func (f *FuncNode) getValue(env *Env) EvaluateNode {
 			value:     argument.value,
 			valueType: argument.valueType,
 		}
+		(*funcDef.closure.variables)[funcDef.parameters[index]] = EvaluateNode{
+			value:     argument.value,
+			valueType: argument.valueType,
+		}
 	}
 
-	fmt.Printf("env: %v\n", newEnv.variables)
+	// closure の値に書き換え
+	for key, value := range *funcDef.closure.variables {
+		if _, ok := (*newEnv.variables)[key]; !ok {
+			(*newEnv.variables)[key] = value
+		}
+	}
+
+
 	for _, statement := range funcDef.statements {
 		// 実際にはエラーではないが、エラーとして扱う
 		// 実際には return で返ってくるものが入っている
 		err := statement.Execute(newEnv)
 		if err != nil {
+			if err.valueType == "function" {
+				(*newEnv.parentFunctions)[err.value] = (*newEnv.functions)[err.value]
+			}
 			return EvaluateNode{
 				value:     err.value,
 				valueType: err.valueType,
