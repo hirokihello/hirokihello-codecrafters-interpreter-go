@@ -1348,6 +1348,11 @@ func (f *FuncNode) getValue(env *Env) EvaluateNode {
 		os.Exit(70)
 	}
 
+	if len(f.arguments) != len(funcDef.parameters) {
+		fmt.Fprintf(os.Stderr, "Function '%s' expects %d arguments, but got %d.\n", funcNameOrId, len(funcDef.parameters), len(f.arguments))
+		os.Exit(70)
+	}
+
 	newEnv := env.NewChildEnv()
 	for index, arg := range f.arguments {
 		argument := arg.getValue(newEnv)
