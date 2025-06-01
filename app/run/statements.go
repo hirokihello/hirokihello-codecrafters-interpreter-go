@@ -69,6 +69,7 @@ type ReturnStatement struct {
 type ReturnError struct {
 	value     string
 	valueType string
+	function  *Function
 }
 
 func (e *ExpressionStatement) Execute(env *Env) *ReturnError {
@@ -83,6 +84,8 @@ func (b *BlockStatement) Execute(env *Env) *ReturnError {
 			return err
 		}
 	}
+
+	// ブロック終了時に親環境を更新
 	return nil
 }
 
@@ -97,7 +100,6 @@ func (f *ForStatement) Execute(parentEnv *Env) *ReturnError {
 	newEnv := parentEnv.NewChildEnv()
 
 	if err := f.firstStatement.Execute(newEnv); err != nil {
-		setParentEnv(newEnv)
 		return err
 	}
 
@@ -105,24 +107,20 @@ func (f *ForStatement) Execute(parentEnv *Env) *ReturnError {
 		grandChildEnv := newEnv.NewChildEnv()
 		for _, statement := range f.statements {
 			if err := statement.Execute(grandChildEnv); err != nil {
-				// setParentEnv(grandChildEnv)
 				return err
 			}
-			// setParentEnv(grandChildEnv)
 		}
 		if err := f.endStatement.Execute(newEnv); err != nil {
-			setParentEnv(newEnv)
 			return err
 		}
 	}
-	setParentEnv(newEnv)
 	return nil
 }
 
 func (v *VariableStatement) Execute(env *Env) *ReturnError {
 	value := v.expr.getValue(env)
-	// 変数の値をセットする
-	(env.variables)[v.varName] = value
+	// 新しい変数を現在の環境に定義
+	env.Define(v.varName, value)
 	return nil
 }
 
@@ -150,7 +148,6 @@ func (i *IfStatement) Execute(parentEnv *Env) *ReturnError {
 		if err := statement.Execute(newEnv); err != nil {
 			return err
 		}
-		setParentEnv(newEnv)
 	}
 	return nil
 }
@@ -158,49 +155,34 @@ func (i *IfStatement) Execute(parentEnv *Env) *ReturnError {
 func (w *WhileStatement) Execute(parentEnv *Env) *ReturnError {
 	newEnv := parentEnv.NewChildEnv()
 	for isTrueString(w.expr.getValue(newEnv).value) {
-		for _, statement := range w.statements {
-			if err := statement.Execute(newEnv); err != nil {
-				setParentEnv(newEnv)
-				return err
+		if len(w.statements) > 0 {
+			for _, statement := range w.statements {
+				if err := statement.Execute(newEnv); err != nil {
+					return err
+				}
 			}
-			setParentEnv(newEnv)
 		}
-		setParentEnv(newEnv)
+		// ループ内での変更を親環境に反映
 	}
-	setParentEnv(newEnv)
 	return nil
 }
 
-var functionIdCounter = 0
-
-func genFunctionId(baseStr string) string {
-	functionIdCounter++
-	return fmt.Sprintf("%s-%d", baseStr, functionIdCounter)
-}
-
-func getFunctionId(baseStr string) string {
-	return fmt.Sprintf("%s-%d", baseStr, functionIdCounter)
-}
 
 func (f *FunStatement) Execute(env *Env) *ReturnError {
-	// 関数の定義をセットする
-	(env.functions)["<fn "+f.name+">"] = Function{
+	// 関数を定義
+	fn := Function{
 		name:       f.name,
 		parameters: f.parameters,
 		statements: f.statements,
-		closure:    env.newClosureEnv(),
-	}
-	(env.variables)[f.name] = EvaluateNode{
-		value:     "<fn " + f.name + ">",
-		valueType: "function",
+		closure:    env, // 現在の環境をクロージャとして保持
 	}
 
-	(funcGlobalEnv.functions)[genFunctionId("<fn "+f.name+">")] = Function{
-		name:       f.name,
-		parameters: f.parameters,
-		statements: f.statements,
-		closure:    env.newClosureEnv(),
-	}
+	// 関数を変数として定義
+	env.Define(f.name, EvaluateNode{
+		value:     "<fn " + f.name + ">",
+		valueType: "function",
+		function:  &fn,
+	})
 
 	return nil
 }
@@ -210,8 +192,9 @@ func (r *ReturnStatement) Execute(env *Env) *ReturnError {
 
 	if node.valueType == "function" {
 		return &ReturnError{
-			value:     getFunctionId(node.value),
+			value:     node.value,
 			valueType: "function",
+			function:  node.function,
 		}
 	}
 
@@ -221,31 +204,6 @@ func (r *ReturnStatement) Execute(env *Env) *ReturnError {
 	}
 }
 
-func setParentEnv(childEnv *Env) {
-	// for k, v := range childEnv.parentVariables {
-	// 	parentEnv := childEnv.parentEnv
-	// 	for _, ok := parentEnv.variables[k]; ok; {
-	// 		if parentEnv.variables[k] != v {
-	// 			parentEnv.variables[k] = v
-	// 		} else if _, ok := parentEnv.parentVariables[k]; ok && parentEnv.parentVariables[k] != v {
-	// 			parentEnv.parentVariables[k] = v
-	// 		} else {
-	// 			break;
-	// 		}
-	// 		parentEnv = parentEnv.parentEnv
-	// 	}
-	// }
-	for k, v := range childEnv.variables {
-		// この変数が親から継承したものかどうかを確認
-		if originalValue, exists := childEnv.parentVariables[k]; exists {
-				// 値が変更された場合のみ更新する
-				if originalValue != v {
-						childEnv.parentEnv.variables[k] = v
-				}
-		}
-		// 子環境で新たに定義された変数は親環境に反映しない
-}
-}
 
 func (r *ReturnError) Error() string {
 	return r.valueType + " " + r.value

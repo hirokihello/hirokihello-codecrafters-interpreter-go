@@ -20,7 +20,7 @@ func Run() {
 
 	statements := parser.parseStatements()
 
-	env := getGlobalEnv()
+	env := NewEnv()
 	for _, statement := range statements {
 		statement.Execute(env)
 	}

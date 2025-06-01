@@ -1,12 +1,8 @@
 package run
 
 type Env struct {
-	variables       map[string]EvaluateNode
-	parentVariables map[string]EvaluateNode
-	functions       map[string]Function
-	parentFunctions map[string]Function
-	parentEnv       *Env
-	envType         string
+	variables map[string]EvaluateNode
+	parentEnv *Env
 }
 
 type Function struct {
@@ -17,90 +13,46 @@ type Function struct {
 }
 
 func NewEnv() *Env {
-	env := &Env{
-		variables:       map[string]EvaluateNode{},
-		parentVariables: map[string]EvaluateNode{},
-		functions:       map[string]Function{},
-		parentEnv: &Env{
-			variables:       map[string]EvaluateNode{},
-			parentVariables: map[string]EvaluateNode{},
-			functions:       map[string]Function{},
-			parentEnv:       nil,
-			envType:        "global",
-		},
-		envType: "global",
+	return &Env{
+		variables: map[string]EvaluateNode{},
+		parentEnv: nil,
 	}
-	return env
 }
 
-var globalEnv *Env
-
-var funcGlobalEnv *Env = &Env{
-	variables:       map[string]EvaluateNode{},
-	parentVariables: map[string]EvaluateNode{},
-	functions:       map[string]Function{},
-	parentEnv: &Env{
-		variables:       map[string]EvaluateNode{},
-		parentVariables: map[string]EvaluateNode{},
-		functions:       map[string]Function{},
-		parentEnv:       nil,
-		envType:        "global",
-	},
-	envType: "global",
-}
-
-func getGlobalEnv() *Env {
-	if globalEnv == nil {
-		globalEnv = NewEnv()
-	}
-	return globalEnv
-}
 
 // NewChildEnv creates a new child environment that inherits from the current environment.
 func (e *Env) NewChildEnv() *Env {
-	newVariables := make(map[string]EvaluateNode)
-	newFunctions := make(map[string]Function)
-
-	// Copy the variables and functions from the parent environment
-	for k, v := range e.variables {
-		newVariables[k] = v
-	}
-	for k, v := range e.functions {
-		newFunctions[k] = v
-	}
-
 	return &Env{
-		variables:       newVariables,
-		functions:       newFunctions,
-		parentVariables: e.variables,
-		parentFunctions: e.functions,
-		parentEnv:       e,
-		envType:         "child",
+		variables: map[string]EvaluateNode{},
+		parentEnv: e,
 	}
 }
 
-func (e *Env) newClosureEnv() *Env {
-	newVariables := make(map[string]EvaluateNode)
-	newFunctions := make(map[string]Function)
-	newParentVariables := make(map[string]EvaluateNode)
-	newParentFunctions := make(map[string]Function)
-
-	// Copy the variables and functions from the parent environment
-	for k, v := range e.variables {
-		newVariables[k] = v
-		newParentVariables[k] = v
+// Get looks up a variable in this environment or parent environments
+func (e *Env) Get(name string) (EvaluateNode, bool) {
+	if val, ok := e.variables[name]; ok {
+		return val, true
 	}
-	for k, v := range e.functions {
-		newFunctions[k] = v
-		newParentFunctions[k] = v
+	if e.parentEnv != nil {
+		return e.parentEnv.Get(name)
 	}
-
-	return &Env{
-		variables:       newVariables,
-		functions:       newFunctions,
-		parentVariables: newParentVariables,
-		parentFunctions: newParentFunctions,
-		parentEnv:       e.parentEnv,
-		envType:         "closure",
-	}
+	return EvaluateNode{}, false
 }
+
+// Set sets a variable in the environment where it's defined
+func (e *Env) Set(name string, value EvaluateNode) bool {
+	if _, ok := e.variables[name]; ok {
+		e.variables[name] = value
+		return true
+	}
+	if e.parentEnv != nil {
+		return e.parentEnv.Set(name, value)
+	}
+	return false
+}
+
+// Define creates a new variable in the current environment
+func (e *Env) Define(name string, value EvaluateNode) {
+	e.variables[name] = value
+}
+
